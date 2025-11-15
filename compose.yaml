@@ -1,0 +1,62 @@
+
+
+services:
+  # --------------------------
+  # Tailscale sidecar
+  # --------------------------
+  tailscale-sc:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-sc
+    hostname: srt-vps
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE # Check if we can remove
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  # --------------------------
+  # SRT Live Server
+  # --------------------------
+  srt-server:
+    build:
+      context: .
+      dockerfile: srt-server.dockerfile
+    container_name: srt-server
+    network_mode: service:tailscale-sc # Share network namespace with tailscale-sc
+    depends_on:
+      - tailscale-sc
+    restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - ./recordings:/recordings
+    environment:
+      - SRT_PORT=5000
+
+  # --------------------------
+  # Watchtower for auto-updates
+  # --------------------------
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    environment:
+      - DOCKER_API_VERSION=1.52 # Watchtower complains otherwise see https://github.com/containrrr/watchtower/issues/2126
+    command:
+      - "--label-enable"     # only update containers with the label
+      - "--cleanup"          # remove old images
+      - "--interval"
+      - "20"                # check every 5 minutes (adjust if you like)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:
