@@ -17,7 +17,7 @@ services:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE # Check if we can remove
+      - SYS_MODULE # TODO: Do I need this?
     restart: unless-stopped
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -27,8 +27,7 @@ services:
   # --------------------------
   srt-server:
     build:
-      context: .
-      dockerfile: srt-server.dockerfile
+      context: ./../server
     container_name: srt-server
     network_mode: service:tailscale-sc # Share network namespace with tailscale-sc
     depends_on:
@@ -51,9 +50,9 @@ services:
       - DOCKER_API_VERSION=1.52 # Watchtower complains otherwise see https://github.com/containrrr/watchtower/issues/2126
     command:
       - "--label-enable"     # only update containers with the label
-      - "--cleanup"          # remove old images
+      - "--cleanup"
       - "--interval"
-      - "20"                # check every 5 minutes (adjust if you like)
+      - "20"                # In seconds
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
