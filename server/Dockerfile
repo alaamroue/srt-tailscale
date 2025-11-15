@@ -1,11 +1,11 @@
-# build stage
+# Build stage
 FROM alpine:latest AS build
 RUN apk add --no-cache git cmake linux-headers alpine-sdk  tcl openssl-dev zlib-dev
 RUN git clone https://github.com/Haivision/srt.git /tmp/srt
 WORKDIR /tmp/srt
 RUN ./configure && make -j8 && make install
 
-# final stage
+# Final stage
 FROM alpine:latest
 RUN apk add libstdc++
 COPY --from=build /usr/local/bin/srt-* /usr/local/bin/
