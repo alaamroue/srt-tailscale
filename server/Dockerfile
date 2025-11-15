@@ -10,7 +10,6 @@ FROM alpine:latest
 RUN apk add libstdc++
 COPY --from=build /usr/local/bin/srt-* /usr/local/bin/
 COPY --from=build /usr/local/lib/libsrt* /usr/local/lib/
-RUN echo "Hello"
 
 ENV SRT_PORT=1936
 RUN mkdir -p /recordings
