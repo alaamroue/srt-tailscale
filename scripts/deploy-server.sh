@@ -17,67 +17,65 @@ log() {
   ts="$(date +"%Y-%m-%d %H:%M:%S")"
 
   case "$level" in
-    INFO)
-      printf "%s [${GREEN}%s${NC}] %s\n" "$ts" "$level" "$message"
-      ;;
-    WARN)
-      printf "%s [${YELLOW}%s${NC}] %s\n" "$ts" "$level" "$message"
-      ;;
-    ERROR)
-      printf "%s [${RED}%s${NC}] %s\n" "$ts" "$level" "$message" >&2
-      ;;
-    *)
-      # Unknown level -> no color
-      printf "%s [%s] %s\n" "$ts" "$level" "$message"
-      ;;
+    INFO) printf "%s [${GREEN}%s${NC}] %s\n" "$ts" "$level" "$message" ;;
+    WARN) printf "%s [${YELLOW}%s${NC}] %s\n" "$ts" "$level" "$message" ;;
+    ERROR) printf "%s [${RED}%s${NC}] %s\n" "$ts" "$level" "$message" >&2 ;;
+    *) printf "%s [%s] %s\n" "$ts" "$level" "$message" ;;
   esac
 }
 
-### Load and check .env
-ENV_FILE="$REPO_DIR/.env"
-log INFO "Loading environment variables from $ENV_FILE file"
+### Determine environment
+ENVIRONMENT="${1:-prod}"  # default to production
+
+if [[ "$ENVIRONMENT" == "dev" ]]; then
+  log INFO "Running in DEV mode"
+  COMPOSE_FILES="-f $REPO_DIR/infra/docker-compose.server.yml -f $REPO_DIR/infra/docker-compose.server.dev.yml"
+  ENV_FILE="$REPO_DIR/.env.dev"
+else
+  log INFO "Running in PRODUCTION mode"
+  COMPOSE_FILES="-f $REPO_DIR/infra/docker-compose.server.yml"
+  ENV_FILE="$REPO_DIR/.env"
+fi
+
+### Load and check env variables
+log INFO "Loading environment variables from $ENV_FILE"
 if [[ -f "$ENV_FILE" ]]; then
     set -o allexport
     source "$ENV_FILE"
     set +o allexport
+else
+    log WARN "$ENV_FILE not found — continuing without loading"
 fi
-log INFO "Checking that TS_AUTHKEY_SERVER variable is set"
+
+log INFO "Checking that TS_AUTHKEY_SERVER is set"
 if [[ -z "${TS_AUTHKEY_SERVER:-}" ]]; then
-    log ERROR "TS_AUTHKEY_SERVER environment variable not set. Please set it in the .env file or export it in your shell."
+    log ERROR "TS_AUTHKEY_SERVER is missing. Add it to $ENV_FILE or export it first."
     exit 1
 fi
 
-## Check Docker and Docker Compose
+### Docker checks
 log INFO "Checking Docker installation"
 command -v docker >/dev/null 2>&1 || {
-  log ERROR "Docker not installed or not in PATH"
+  log ERROR "Docker not installed"
   exit 1
 }
 
-SERVER_COMPOSE_FILE="$REPO_DIR/infra/docker-compose.server.yml"
-log INFO "Docker: Checking compose file at $SERVER_COMPOSE_FILE"
-if [[ ! -f "$SERVER_COMPOSE_FILE" ]]; then
-    log ERROR "Compose file not found: $SERVER_COMPOSE_FILE"
+log INFO "Docker Compose: Pulling images (if applicable)..."
+docker compose $COMPOSE_FILES pull || log WARN "Pull failed or skipped for dev"
+
+log INFO "Docker Compose: Building (dev builds locally)..."
+docker compose $COMPOSE_FILES build --pull || {
+    log ERROR "Docker build failed"
     exit 1
-fi
-log INFO "Docker: Pulling latest Docker images..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" pull; then
-    log ERROR "Pull failed"
+}
+
+log INFO "Docker Compose: Bringing up stack..."
+docker compose $COMPOSE_FILES up -d || {
+    log ERROR "Compose up failed"
     exit 1
-fi
-log INFO "Docker: Building local images..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" build --pull; then
-    log ERROR "Docker Build failed"
-    exit 1
-fi
-log INFO "Docker: Starting stack using compose up..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" up -d; then
-    log ERROR "Docker compose up failed"
-    exit 1
-fi
+}
 
 log INFO "Checking container status:"
-if ! docker compose -f "$SERVER_COMPOSE_FILE" ps; then
-    log WARN "Could not check container status"
-fi
-log INFO "Deployment complete!"
+docker compose $COMPOSE_FILES ps || log WARN "Unable to check container status"
+
+log INFO "Deployment complete for $ENVIRONMENT mode!"

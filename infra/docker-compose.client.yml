@@ -17,7 +17,6 @@ services:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE # TODO: Do I need this?
     restart: unless-stopped
     labels:
       - watchtower.group=client
@@ -27,11 +26,9 @@ services:
   # SRT Live Client
   # --------------------------
   srt-client:
-    #image: ghcr.io/alaamroue/srt-tailscale-client:latest
-    build:
-      context: ./../client
+    image: ghcr.io/alaamroue/srt-tailscale-client:latest
     container_name: srt-client
-    network_mode: service:tailscale-sc-client # Share network namespace with tailscale-sc-client
+    network_mode: service:tailscale-sc-client
     depends_on:
       - tailscale-sc-client
     restart: unless-stopped
@@ -50,14 +47,14 @@ services:
     image: containrrr/watchtower:latest
     container_name: watchtower-client
     environment:
-      - DOCKER_API_VERSION=1.52 # Watchtower complains otherwise see https://github.com/containrrr/watchtower/issues/2126
+      - DOCKER_API_VERSION=1.52 # Watchtower complains otherwise, see https://github.com/containrrr/watchtower/issues/2126
     command:
-      - "--label-enable"     # only update containers with the label
+      - "--label-enable"
       - "--scope"
       - "server"
       - "--cleanup"
       - "--interval"
-      - "20"                # In seconds
+      - "20"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
