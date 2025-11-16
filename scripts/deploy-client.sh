@@ -30,13 +30,12 @@ ENVIRONMENT="${1:-prod}"  # default to production
 if [[ "$ENVIRONMENT" == "dev" ]]; then
   log INFO "Running in DEV mode"
   COMPOSE_FILES="-f $REPO_DIR/infra/docker-compose.client.yml -f $REPO_DIR/infra/docker-compose.client.dev.yml"
-  ENV_FILE="$REPO_DIR/.env.dev"
 else
   log INFO "Running in PRODUCTION mode"
   COMPOSE_FILES="-f $REPO_DIR/infra/docker-compose.client.yml"
-  ENV_FILE="$REPO_DIR/.env"
 fi
 
+  ENV_FILE="$REPO_DIR/.env"
 ### Load and check env variables
 log INFO "Loading environment variables from $ENV_FILE"
 if [[ -f "$ENV_FILE" ]]; then
@@ -63,7 +62,7 @@ command -v docker >/dev/null 2>&1 || {
 log INFO "Docker Compose: Pulling images (if applicable)..."
 docker compose $COMPOSE_FILES pull || log WARN "Pull failed or skipped for dev"
 
-log INFO "Docker Compose: Building (dev builds locally)..."
+log INFO "Docker Compose: Building..."
 docker compose $COMPOSE_FILES build --pull || {
     log ERROR "Docker build failed"
     exit 1
