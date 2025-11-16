@@ -71,9 +71,9 @@ jobs:
           file: ./server/Dockerfile
           platforms: ${{ github.event.inputs.platforms || 'linux/amd64,linux/arm64' }} # Add later: linux/arm/v7,linux/arm/v6
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_image != 'false') }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:cache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:cache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.TAG }}
             ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ env.TAG }}
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
