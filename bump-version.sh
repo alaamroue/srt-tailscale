@@ -37,7 +37,7 @@ echo "New version: $NEW_TAG"
 
 # Check if okay
 read -p "Switch to new tag? " CONFIRM
-if [[ "$CONFIRM" != "y" ]]; then
+if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" && "$CONFIRM" != "yes" && "$CONFIRM" != "YES" ]]; then
   echo "Aborting."
   exit 1
 fi
