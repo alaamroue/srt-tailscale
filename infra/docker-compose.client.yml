@@ -26,7 +26,7 @@ services:
   # SRT Live Client
   # --------------------------
   srt-client:
-    image: ghcr.io/alaamroue/srt-tailscale-client:latest
+    image: alaamr/srt-tailscale-client:latest
     container_name: srt-client
     network_mode: service:tailscale-sc-client
     depends_on:
