@@ -1,6 +1,8 @@
 # srt-tailscale
 
-![License](https://img.shields.io/github/license/alaamroue/srt-tailscale) ![GitHub Actions Workflow Status - Server](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/docker-publish-server.yml?logo=githubactions&logoColor=white&label=Server%20Build) ![GitHub Actions Workflow Status - Client](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/docker-publish-client.yml?logo=githubactions&logoColor=white&label=Client%20Build) ![GitHub Actions Workflow Status - QA](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/verify-workflows.yml?logo=githubactions&logoColor=white&label=Workflow%20Consistency)
+![GitHub Tag](https://img.shields.io/github/v/tag/alaamroue/srt-tailscale) ![License](https://img.shields.io/github/license/alaamroue/srt-tailscale) ![GitHub Actions Workflow Status - Server](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/docker-publish-server.yml?logo=githubactions&logoColor=white&label=Server%20Build) ![GitHub Actions Workflow Status - Client](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/docker-publish-client.yml?logo=githubactions&logoColor=white&label=Client%20Build) ![GitHub Actions Workflow Status - QA](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/verify-workflows.yml?logo=githubactions&logoColor=white&label=Workflow%20Consistency)
+
+
 
 ![Shell](https://img.shields.io/badge/Language-Shell-black.svg)
 ![Docker](https://img.shields.io/badge/Platform-Docker-blue.svg)
