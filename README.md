@@ -2,6 +2,8 @@
 
 ![GitHub Tag](https://img.shields.io/github/v/tag/alaamroue/srt-tailscale) ![License](https://img.shields.io/github/license/alaamroue/srt-tailscale) ![GitHub Actions Workflow Status - Server](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/docker-publish-server.yml?logo=githubactions&logoColor=white&label=Server%20Build) ![GitHub Actions Workflow Status - Client](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/docker-publish-client.yml?logo=githubactions&logoColor=white&label=Client%20Build) ![GitHub Actions Workflow Status - QA](https://img.shields.io/github/actions/workflow/status/alaamroue/srt-tailscale/verify-workflows.yml?logo=githubactions&logoColor=white&label=Workflow%20Consistency)
 
+![Docker Image Version](https://img.shields.io/docker/v/alaamr/srt-ts-server?sort=semver&logo=docker&logoColor=white&label=DockerHub%3A%20Server)
+![Docker Image Version](https://img.shields.io/docker/v/alaamr/srt-ts-client?sort=semver&logo=docker&logoColor=white&label=DockerHub%3A%20Client)
 
 
 ![Shell](https://img.shields.io/badge/Language-Shell-black.svg)
