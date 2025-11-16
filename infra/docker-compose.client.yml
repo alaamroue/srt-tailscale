@@ -4,12 +4,12 @@ services:
   # --------------------------
   # Tailscale sidecar
   # --------------------------
-  tailscale-sc-server:
+  tailscale-sc-client:
     image: tailscale/tailscale:latest
-    container_name: tailscale-sc-server
-    hostname: srt-server
+    container_name: tailscale-sc-client
+    hostname: srt-client
     environment:
-      - TS_AUTHKEY_SERVER=${TS_AUTHKEY_SERVER}
+      - TS_AUTHKEY_CLIENT=${TS_AUTHKEY_CLIENT}
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
       - tailscale-state:/var/lib/tailscale
@@ -20,35 +20,35 @@ services:
       - SYS_MODULE # TODO: Do I need this?
     restart: unless-stopped
     labels:
-      - watchtower.group=server
+      - watchtower.group=client
       - com.centurylinklabs.watchtower.enable=true
 
   # --------------------------
-  # SRT Live Server
+  # SRT Live Client
   # --------------------------
-  srt-server:
-    #image: ghcr.io/alaamroue/srt-tailscale-server:latest
+  srt-client:
+    #image: ghcr.io/alaamroue/srt-tailscale-client:latest
     build:
-      context: ./../server
-    container_name: srt-server
-    network_mode: service:tailscale-sc-server # Share network namespace with tailscale-sc
+      context: ./../client
+    container_name: srt-client
+    network_mode: service:tailscale-sc-client # Share network namespace with tailscale-sc-client
     depends_on:
-      - tailscale-sc-server
+      - tailscale-sc-client
     restart: unless-stopped
     labels:
-      - watchtower.group=server
+      - watchtower.group=client
       - com.centurylinklabs.watchtower.enable=true
-    volumes:
-      - ./recordings:/recordings
+    #volumes:
+    #  - ./recordings:/recordings
     environment:
       - SRT_PORT=5000
 
   # --------------------------
   # Watchtower for auto-updates
   # --------------------------
-  watchtower-server:
+  watchtower-client:
     image: containrrr/watchtower:latest
-    container_name: watchtower-server
+    container_name: watchtower-client
     environment:
       - DOCKER_API_VERSION=1.52 # Watchtower complains otherwise see https://github.com/containrrr/watchtower/issues/2126
     command:

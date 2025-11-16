@@ -41,9 +41,9 @@ if [[ -f "$ENV_FILE" ]]; then
     source "$ENV_FILE"
     set +o allexport
 fi
-log INFO "Checking that TS_AUTHKEY_SERVER variable is set"
-if [[ -z "${TS_AUTHKEY_SERVER:-}" ]]; then
-    log ERROR "TS_AUTHKEY_SERVER environment variable not set. Please set it in the .env file or export it in your shell."
+log INFO "Checking that TS_AUTHKEY_CLIENT variable is set"
+if [[ -z "${TS_AUTHKEY_CLIENT:-}" ]]; then
+    log ERROR "TS_AUTHKEY_CLIENT environment variable not set. Please set it in the .env file or export it in your shell."
     exit 1
 fi
 
@@ -54,30 +54,30 @@ command -v docker >/dev/null 2>&1 || {
   exit 1
 }
 
-SERVER_COMPOSE_FILE="$REPO_DIR/infra/docker-compose.server.yml"
-log INFO "Docker: Checking compose file at $SERVER_COMPOSE_FILE"
-if [[ ! -f "$SERVER_COMPOSE_FILE" ]]; then
-    log ERROR "Compose file not found: $SERVER_COMPOSE_FILE"
+CLIENT_COMPOSE_FILE="$REPO_DIR/infra/docker-compose.client.yml"
+log INFO "Docker: Checking compose file at $CLIENT_COMPOSE_FILE"
+if [[ ! -f "$CLIENT_COMPOSE_FILE" ]]; then
+    log ERROR "Compose file not found: $CLIENT_COMPOSE_FILE"
     exit 1
 fi
 log INFO "Docker: Pulling latest Docker images..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" pull; then
+if ! docker compose -f "$CLIENT_COMPOSE_FILE" pull; then
     log ERROR "Pull failed"
     exit 1
 fi
 log INFO "Docker: Building local images..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" build --pull; then
+if ! docker compose -f "$CLIENT_COMPOSE_FILE" build --pull; then
     log ERROR "Docker Build failed"
     exit 1
 fi
 log INFO "Docker: Starting stack using compose up..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" up -d; then
+if ! docker compose -f "$CLIENT_COMPOSE_FILE" up -d; then
     log ERROR "Docker compose up failed"
     exit 1
 fi
 
 log INFO "Checking container status:"
-if ! docker compose -f "$SERVER_COMPOSE_FILE" ps; then
+if ! docker compose -f "$CLIENT_COMPOSE_FILE" ps; then
     log WARN "Could not check container status"
 fi
 log INFO "Deployment complete!"

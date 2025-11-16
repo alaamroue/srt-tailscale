@@ -33,18 +33,13 @@ log() {
   esac
 }
 
-### Load and check .env
+### Load .env
 ENV_FILE="$REPO_DIR/.env"
 log INFO "Loading environment variables from $ENV_FILE file"
 if [[ -f "$ENV_FILE" ]]; then
     set -o allexport
     source "$ENV_FILE"
     set +o allexport
-fi
-log INFO "Checking that TS_AUTHKEY_SERVER variable is set"
-if [[ -z "${TS_AUTHKEY_SERVER:-}" ]]; then
-    log ERROR "TS_AUTHKEY_SERVER environment variable not set. Please set it in the .env file or export it in your shell."
-    exit 1
 fi
 
 ## Check Docker and Docker Compose
@@ -54,30 +49,22 @@ command -v docker >/dev/null 2>&1 || {
   exit 1
 }
 
-SERVER_COMPOSE_FILE="$REPO_DIR/infra/docker-compose.server.yml"
-log INFO "Docker: Checking compose file at $SERVER_COMPOSE_FILE"
-if [[ ! -f "$SERVER_COMPOSE_FILE" ]]; then
-    log ERROR "Compose file not found: $SERVER_COMPOSE_FILE"
-    exit 1
-fi
-log INFO "Docker: Pulling latest Docker images..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" pull; then
-    log ERROR "Pull failed"
-    exit 1
-fi
-log INFO "Docker: Building local images..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" build --pull; then
-    log ERROR "Docker Build failed"
-    exit 1
-fi
-log INFO "Docker: Starting stack using compose up..."
-if ! docker compose -f "$SERVER_COMPOSE_FILE" up -d; then
-    log ERROR "Docker compose up failed"
+CLIENT_COMPOSE_FILE="$REPO_DIR/infra/docker-compose.client.yml"
+log INFO "Docker: Checking compose file at $CLIENT_COMPOSE_FILE"
+if [[ ! -f "$CLIENT_COMPOSE_FILE" ]]; then
+    log ERROR "Compose file not found: $CLIENT_COMPOSE_FILE"
     exit 1
 fi
 
-log INFO "Checking container status:"
-if ! docker compose -f "$SERVER_COMPOSE_FILE" ps; then
-    log WARN "Could not check container status"
+log INFO "Docker: Running docker compose down"
+if ! docker compose -f "$CLIENT_COMPOSE_FILE" down; then
+    log ERROR "Docker compose down failed"
+    exit 1
 fi
-log INFO "Deployment complete!"
+
+log INFO "Shutdown complete!"
+if ! docker compose -f "$CLIENT_COMPOSE_FILE" ps -q; then
+    log WARN "Could not check container status"
+else
+    log INFO "All containers are stopped."
+fi

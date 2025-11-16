@@ -7,7 +7,7 @@ RUN ./configure && make -j8 && make install
 
 # Final stage
 FROM alpine:latest
-RUN apk add libstdc++
+RUN apk --no-cache add libstdc++
 COPY --from=build /usr/local/bin/srt-* /usr/local/bin/
 COPY --from=build /usr/local/lib/libsrt* /usr/local/lib/
 

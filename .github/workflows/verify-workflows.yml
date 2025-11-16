@@ -1,0 +1,31 @@
+name: Verify workflow consistency
+
+on:
+  push:
+    paths:
+      - '.github/workflows/docker-publish-server.yml'
+      - '.github/workflows/docker-publish-client.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-workflows:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare client/server workflow files
+        run: |
+          sed -e 's/server/PLACEHOLDER/g' \
+              -e 's/client/PLACEHOLDER/g' \
+              .github/workflows/docker-publish-server.yml > server.tmp
+
+          sed -e 's/server/PLACEHOLDER/g' \
+              -e 's/client/PLACEHOLDER/g' \
+              .github/workflows/docker-publish-client.yml > client.tmp
+
+          echo "Checking if workflows match..."
+          diff server.tmp client.tmp

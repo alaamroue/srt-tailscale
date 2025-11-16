@@ -1,12 +1,12 @@
-name: Build and Push Docker Image of server
+name: Build and Push Docker Image of client
 
 on:
   push:
     branches:
       - master
     paths:
-      - 'server/Dockerfile'
-      - 'server/**'
+      - 'client/Dockerfile'
+      - 'client/**'
     tags:
       - 'v*'
 
@@ -31,7 +31,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}-server
+  IMAGE_NAME: ghcr.io/${{ github.repository }}-client
 
 jobs:
   build:
@@ -67,8 +67,8 @@ jobs:
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
-          context: ./server
-          file: ./server/Dockerfile
+          context: ./client
+          file: ./client/Dockerfile
           platforms: ${{ github.event.inputs.platforms || 'linux/amd64,linux/arm64' }} # Add later: linux/arm/v7,linux/arm/v6
           push: ${{ github.event.inputs.push_image || true }}
           cache-from: type=gha
