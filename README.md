@@ -19,6 +19,7 @@ Lightweight repo to run SRT (Secure Reliable Transport) endpoints together with 
 - [Project layout](#project-layout)
 - [Prerequisites](#prerequisites)
 - [Quick start (development)](#quick-start-development)
+- [Developing with WSL](#developing-with-wsl)
 - [Deploy to a VPS / production](#deploy-to-a-vps--production)
 - [Scripts and utilities](#scripts-and-utilities)
 - [License](#license)
@@ -49,6 +50,22 @@ git clone https://github.com/alaamroue/srt-tailscale.git
 cd srt-tailscale
 ./scripts/deploy-server.sh dev
 ./scripts/deploy-client.sh dev
+```
+
+## Developing with WSL
+
+### WSL setup
+Make sure that WLS supports IPv6. In .wslconfig add
+```
+networkingMode=mirrored
+```
+
+
+### Attaching camera to WSL (Development)
+Run the following in PowerShell (as Administrator):
+```ps1
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+\\wsl.localhost\<Path-to-Repo>\srt-tailscale\Manage-WSL-Camera.ps1
 ```
 
 ## Deploy to a VPS / production
