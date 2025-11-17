@@ -1,8 +1,8 @@
 # Build stage
 FROM alpine:latest AS build
 RUN apk add --no-cache git build-base cmake linux-headers jpeg-dev
-RUN git clone https://github.com/jacksonliam/mjpg-streamer.git
-WORKDIR mjpg-streamer/mjpg-streamer-experimental
+RUN git clone https://github.com/jacksonliam/mjpg-streamer.git /tmp/mjpg-streamer
+WORKDIR /tmp/mjpg-streamer/mjpg-streamer-experimental
 RUN sed -i 's/v4l2uvc.c)/v4l2uvc.c ..\/..\/utils.c)/' plugins/input_uvc/CMakeLists.txt && \
     sed -i '/#include <linux\/stat.h>/d' utils.c
 RUN make && make install
