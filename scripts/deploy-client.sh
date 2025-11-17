@@ -28,16 +28,13 @@ log() {
 ENVIRONMENT="${1:-prod}"  # default to production
 
 if [[ "$ENVIRONMENT" == "dev" ]]; then
-  log INFO "Running in DEV mode"
   COMPOSE_FILES="-f $REPO_DIR/infra/docker-compose.client.yml -f $REPO_DIR/infra/docker-compose.client.dev.yml"
 else
-  log INFO "Running in PRODUCTION mode"
   COMPOSE_FILES="-f $REPO_DIR/infra/docker-compose.client.yml"
 fi
 
-  ENV_FILE="$REPO_DIR/.env"
+ENV_FILE="$REPO_DIR/.env"
 ### Load and check env variables
-log INFO "Loading environment variables from $ENV_FILE"
 if [[ -f "$ENV_FILE" ]]; then
     set -o allexport
     source "$ENV_FILE"
@@ -46,35 +43,29 @@ else
     log WARN "$ENV_FILE not found — continuing without loading"
 fi
 
-log INFO "Checking that TS_AUTHKEY_CLIENT is set"
 if [[ -z "${TS_AUTHKEY_CLIENT:-}" ]]; then
     log ERROR "TS_AUTHKEY_CLIENT is missing. Add it to $ENV_FILE or export it first."
     exit 1
 fi
 
 ### Docker checks
-log INFO "Checking Docker installation"
 command -v docker >/dev/null 2>&1 || {
   log ERROR "Docker not installed"
   exit 1
 }
 
-log INFO "Docker Compose: Pulling images (if applicable)..."
 docker compose $COMPOSE_FILES pull || log WARN "Pull failed or skipped for dev"
 
-log INFO "Docker Compose: Building..."
 docker compose $COMPOSE_FILES build --pull || {
     log ERROR "Docker build failed"
     exit 1
 }
 
-log INFO "Docker Compose: Bringing up stack..."
 docker compose $COMPOSE_FILES up -d || {
     log ERROR "Compose up failed"
     exit 1
 }
 
-log INFO "Checking container status:"
 docker compose $COMPOSE_FILES ps || log WARN "Unable to check container status"
 
 log INFO "Deployment complete for $ENVIRONMENT mode!"
