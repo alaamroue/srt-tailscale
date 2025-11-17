@@ -9,10 +9,10 @@ services:
     container_name: tailscale-sc-client
     hostname: srt-client
     environment:
-      - TS_AUTHKEY_CLIENT=${TS_AUTHKEY_CLIENT}
+      - TS_AUTHKEY=${TS_AUTHKEY_CLIENT}
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
-      - tailscale-state:/var/lib/tailscale
+      - tailscale-state-client:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -54,10 +54,10 @@ services:
       - "server"
       - "--cleanup"
       - "--interval"
-      - "20"
+      - "60"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
 volumes:
-  tailscale-state:
+  tailscale-state-client:

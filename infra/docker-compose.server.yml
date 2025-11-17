@@ -9,10 +9,10 @@ services:
     container_name: tailscale-sc-server
     hostname: srt-server
     environment:
-      - TS_AUTHKEY_SERVER=${TS_AUTHKEY_SERVER}
+      - TS_AUTHKEY=${TS_AUTHKEY_SERVER}
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
-      - tailscale-state:/var/lib/tailscale
+      - tailscale-state-server:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -38,7 +38,7 @@ services:
     volumes:
       - ./recordings:/recordings
     environment:
-      - SRT_PORT=5000
+      - SRT_PORT=1936
 
   # --------------------------
   # Watchtower for auto-updates
@@ -54,10 +54,10 @@ services:
       - "server"
       - "--cleanup"
       - "--interval"
-      - "20"
+      - "60"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
 volumes:
-  tailscale-state:
+  tailscale-state-server:
