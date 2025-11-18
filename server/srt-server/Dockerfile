@@ -7,10 +7,13 @@ RUN ./configure && make -j8 && make install
 
 # Final stage
 FROM alpine:latest
-RUN apk --no-cache add libstdc++
+RUN apk --no-cache add ffmpeg supervisor rclone
 COPY --from=build /usr/local/bin/srt-* /usr/local/bin/
 COPY --from=build /usr/local/lib/libsrt* /usr/local/lib/
 
-ENV SRT_PORT=1936
-RUN mkdir -p /recordings
-ENTRYPOINT ["/bin/sh", "-c", "srt-live-transmit srt://:${SRT_PORT}?mode=listener file://con > /recordings/stream.ts"]
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ffmpeg_srt_receiver.sh /usr/local/bin/
+COPY backup_archive.sh /usr/local/bin/
+COPY record_cleaner.sh /usr/local/bin/
+
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

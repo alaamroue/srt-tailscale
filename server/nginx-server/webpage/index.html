@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Raspberry Pi Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #050611;
+      --bg-alt: #101322;
+      --accent: #ff3366;
+      --accent-soft: rgba(255, 51, 102, 0.15);
+      --accent-2: #34d399;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: rgba(148, 163, 184, 0.3);
+      --card-radius: 24px;
+      --shadow-soft: 0 24px 80px rgba(15, 23, 42, 0.85);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1d263b 0, #050611 55%);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* Background effects */
+    .bg-orb {
+      position: fixed;
+      border-radius: 999px;
+      filter: blur(55px);
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .bg-orb.orb-1 {
+      width: 420px;
+      height: 420px;
+      background: #ff3366;
+      top: -80px;
+      right: -40px;
+      animation: floatOrb 16s infinite alternate ease-in-out;
+    }
+
+    .bg-orb.orb-2 {
+      width: 360px;
+      height: 360px;
+      background: #22c55e;
+      bottom: -80px;
+      left: -60px;
+      animation: floatOrb 20s infinite alternate ease-in-out;
+    }
+
+    @keyframes floatOrb {
+      0% {
+        transform: translate3d(0, 0, 0);
+      }
+      100% {
+        transform: translate3d(30px, -20px, 0);
+      }
+    }
+
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(
+          rgba(148, 163, 184, 0.08) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(148, 163, 184, 0.08) 1px,
+          transparent 1px
+        );
+      background-size: 40px 40px;
+      mask-image: radial-gradient(circle at center, black 0, transparent 75%);
+      opacity: 0.5;
+      z-index: -1;
+    }
+
+    .noise {
+      pointer-events: none;
+      position: fixed;
+      inset: -50px;
+      opacity: 0.06;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='noStitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+      z-index: 10;
+    }
+
+    /* Layout */
+    .shell {
+      width: min(960px, 100%);
+      padding: 24px;
+    }
+
+    .card {
+      position: relative;
+      background: radial-gradient(circle at top left, #111827 0, #020617 55%);
+      border-radius: var(--card-radius);
+      padding: 32px 28px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      gap: 32px;
+      backdrop-filter: blur(18px);
+    }
+
+    @media (max-width: 768px) {
+      .card {
+        grid-template-columns: 1fr;
+        padding: 26px 20px;
+      }
+    }
+
+    /* Glow lines */
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      background: linear-gradient(
+          135deg,
+          rgba(248, 250, 252, 0.75),
+          transparent 35%
+        )
+        border-box;
+      mask:
+        linear-gradient(#000, #000) padding-box,
+        linear-gradient(#000, #000) border-box;
+      mask-composite: exclude;
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    /* Left panel (intro) */
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent-2);
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 2.6rem);
+      line-height: 1.1;
+      margin-bottom: 10px;
+      letter-spacing: -0.03em;
+    }
+
+    .gradient-text {
+      background: linear-gradient(120deg, #f97316, #ec4899, #22c55e);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .subtitle {
+      font-size: 0.98rem;
+      color: var(--muted);
+      max-width: 34rem;
+      line-height: 1.5;
+      margin-bottom: 22px;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .meta-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.8);
+    }
+
+    /* Buttons */
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 0.94rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition:
+        transform 0.14s ease,
+        box-shadow 0.16s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease;
+      outline: none;
+      white-space: nowrap;
+    }
+
+    .btn:focus-visible {
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 0 0 3px rgba(248, 250, 252, 0.9),
+        0 0 0 6px rgba(236, 72, 153, 0.35);
+    }
+
+    .btn-primary {
+      background: radial-gradient(circle at top left, #f97316, #ec4899);
+      color: #f9fafb;
+      box-shadow: 0 16px 40px rgba(236, 72, 153, 0.55);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px) scale(1.01);
+      box-shadow: 0 20px 56px rgba(236, 72, 153, 0.75);
+      filter: brightness(1.05);
+    }
+
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.85);
+      border-color: rgba(148, 163, 184, 0.6);
+      color: var(--text);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15, 23, 42, 1);
+      border-color: rgba(248, 250, 252, 0.8);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.8);
+    }
+
+    .btn-icon {
+      font-size: 1.1rem;
+      display: inline-flex;
+      transform-origin: center;
+    }
+
+    .btn-primary:hover .btn-icon {
+      transform: translateX(1px);
+    }
+
+    .btn-ghost:hover .btn-icon {
+      transform: translateX(1px);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kbd {
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      background: rgba(15, 23, 42, 0.9);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Right panel (terminal + status) */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .status-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: radial-gradient(circle at top left, #0b1120, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+    }
+
+    .status-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .status-value {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.86rem;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--accent-2);
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.9);
+      animation: pulse 1.6s infinite ease-out;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
+      70% {
+        transform: scale(1.3);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(0.95);
+        opacity: 0;
+      }
+    }
+
+    .terminal {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #020617;
+      border: 1px solid rgba(30, 64, 175, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 18px 50px rgba(15, 23, 42, 0.9);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: linear-gradient(90deg, #020617, #111827);
+      border-bottom: 1px solid rgba(30, 64, 175, 0.9);
+    }
+
+    .term-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #f97316;
+      box-shadow: 0 0 9px rgba(249, 115, 22, 0.9);
+    }
+
+    .term-title {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .terminal-body {
+      padding: 12px 14px;
+      color: #e5e7eb;
+      max-height: 190px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .terminal-body::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 32px;
+      background: linear-gradient(to bottom, transparent, #020617);
+    }
+
+    #terminal-output {
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      margin-left: 2px;
+      background: #e5e7eb;
+      animation: blink 1s steps(1, start) infinite;
+    }
+
+    @keyframes blink {
+      0%,
+      50% {
+        opacity: 1;
+      }
+      50.01%,
+      100% {
+        opacity: 0;
+      }
+    }
+
+    .mini-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .metric {
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148, 163, 184, 0.55);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .metric-strong {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    @media (max-width: 480px) {
+      .shell {
+        padding: 16px;
+      }
+      .actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-grid"></div>
+  <div class="noise"></div>
+
+  <div class="shell">
+    <div class="card">
+      <!-- Left side -->
+      <div>
+        <div class="badge-row">
+          <div class="chip">
+            <span class="chip-dot"></span>
+            <span>Raspberry&nbsp;Pi</span>
+          </div>
+          <span>/ home node</span>
+        </div>
+
+        <h1>
+          Welcome to your
+          <span class="gradient-text">Pi Control Center</span>
+        </h1>
+
+        <p class="subtitle">
+          Launch the live camera stream or browse recorded videos — all served
+          directly from your Raspberry Pi.
+        </p>
+
+        <div class="meta-row">
+          <span class="meta-pill">
+            <span class="meta-dot"></span>
+            <span>Local network optimized</span>
+          </span>
+          <span class="meta-pill">
+            <span class="meta-dot"></span>
+            <span>Low latency streaming</span>
+          </span>
+          <span class="meta-pill">
+            <span class="meta-dot"></span>
+            <span>Powered by Linux</span>
+          </span>
+        </div>
+
+          <a class="btn btn-ghost" href="/archive/">
+            <span class="btn-icon">▢</span>
+            <span>Browse Archive</span>
+          </a>
+        </div>
+
+        <div class="hint">
+          <span class="kbd">Tip</span>
+          <span>Use <strong>/stream/</strong> on your TV, and
+            <strong>/videos/</strong> from any device.</span>
+        </div>
+      </div>
+
+      <!-- Right side -->
+      <div class="panel-right">
+        <div class="status-card">
+          <div>
+            <div class="status-label">Pi Status</div>
+            <div class="status-value">
+              <span class="status-dot"></span>
+              <span id="status-text">ONLINE · Ready</span>
+            </div>
+          </div>
+          <div class="mini-metrics">
+            <span class="metric">
+              CPU <span class="metric-strong" id="cpu-load">4%</span>
+            </span>
+            <span class="metric">
+              Temp <span class="metric-strong" id="cpu-temp">41°C</span>
+            </span>
+            <span class="metric">
+              Uptime <span class="metric-strong" id="uptime">00:12:08</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="terminal" aria-label="Raspberry Pi activity log">
+          <div class="terminal-header">
+            <span class="term-dot"></span>
+            <span class="term-title">pi@raspberrypi: ~</span>
+          </div>
+          <div class="terminal-body">
+            <pre id="terminal-output"></pre>
+            <span class="cursor"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Fake dynamic metrics & status (purely visual)
+    (function () {
+      const statusText = document.getElementById("status-text");
+      const cpuLoad = document.getElementById("cpu-load");
+      const cpuTemp = document.getElementById("cpu-temp");
+      const uptime = document.getElementById("uptime");
+
+      const statuses = [
+        "ONLINE · Ready",
+        "ONLINE · Streaming idle",
+        "ONLINE · Serving videos",
+        "ONLINE · Monitoring network",
+      ];
+
+      function randomBetween(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      let seconds = 12 * 60 + 8; // start from 00:12:08
+
+      function formatTime(sec) {
+        const h = Math.floor(sec / 3600)
+          .toString()
+          .padStart(2, "0");
+        const m = Math.floor((sec % 3600) / 60)
+          .toString()
+          .padStart(2, "0");
+        const s = Math.floor(sec % 60)
+          .toString()
+          .padStart(2, "0");
+        return `${h}:${m}:${s}`;
+      }
+
+      function updateMetrics() {
+        statusText.textContent =
+          statuses[Math.floor(Math.random() * statuses.length)];
+
+        const load = randomBetween(3, 18);
+        cpuLoad.textContent = `${load.toFixed(1)}%`;
+
+        const temp = randomBetween(39, 47);
+        cpuTemp.textContent = `${temp.toFixed(1)}°C`;
+
+        seconds += 5;
+        uptime.textContent = formatTime(seconds);
+      }
+
+      updateMetrics();
+      setInterval(updateMetrics, 5000);
+    })();
+
+    // Simple typewriter for terminal log
+    (function () {
+      const el = document.getElementById("terminal-output");
+      const cursor = document.querySelector(".cursor");
+
+      const lines = [
+        "[boot] Initializing Raspberry Pi services...",
+        "[ ok ] Loaded camera interface.",
+        "[ ok ] Mounted media volume at /mnt/videos.",
+        "[ ok ] Streaming endpoint available at http://pi.local/stream/",
+        "[ ok ] Video archive available at http://pi.local/videos/",
+        "[info] Monitoring temperature & CPU usage.",
+        "[info] Press Ctrl+C to detach from this session.",
+      ];
+
+      let currentLine = 0;
+      let charIndex = 0;
+      let buffer = "";
+
+      function typeNextChar() {
+        if (currentLine >= lines.length) {
+          // small pause then restart for a loop effect
+          setTimeout(() => {
+            currentLine = 0;
+            charIndex = 0;
+            buffer = "";
+            el.textContent = "";
+          }, 2000);
+          return;
+        }
+
+        const line = lines[currentLine];
+
+        if (charIndex < line.length) {
+          buffer += line[charIndex];
+          charIndex++;
+          el.textContent = buffer;
+        } else {
+          buffer += "\n";
+          el.textContent = buffer;
+          currentLine++;
+          charIndex = 0;
+        }
+
+        // Random-ish typing speed for a more natural feel
+        const delay = charIndex === 0 ? 260 : 26 + Math.random() * 60;
+        setTimeout(typeNextChar, delay);
+      }
+
+      // Keep cursor at the end
+      const observer = new MutationObserver(() => {
+        if (!cursor) return;
+        cursor.remove();
+        el.parentNode.appendChild(cursor);
+      });
+
+      observer.observe(el, {
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
+
+      typeNextChar();
+    })();
+  </script>
+</body>
+</html>

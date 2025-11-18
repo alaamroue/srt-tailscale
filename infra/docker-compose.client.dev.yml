@@ -1,5 +1,5 @@
 services:
   srt-client:
     build:
-      context: ./../client
+      context: ./../client/srt-client/
       dockerfile: Dockerfile

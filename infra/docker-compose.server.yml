@@ -35,10 +35,30 @@ services:
     labels:
       - watchtower.group=server
       - com.centurylinklabs.watchtower.enable=true
-    volumes:
-      - ./recordings:/recordings
     environment:
       - SRT_PORT=1936
+      - SERVER_LOCAL_ENCODER=${SERVER_LOCAL_ENCODER}
+      - SERVER_LOCAL_ENCODER_CRF=${SERVER_LOCAL_ENCODER_CRF}
+      - SERVER_LOCAL_ENCODER_PRESET=${SERVER_LOCAL_ENCODER_PRESET}
+      - ARCHIVE_SEGMENT_DURATION=${ARCHIVE_SEGMENT_DURATION}
+      - SERVER_RECORD_DIR=${SERVER_RECORD_DIR}
+      - SERVER_RETENTION_PERIOD=${SERVER_RETENTION_PERIOD}
+      - SERVER_CLEANER_INTERVAL=${SERVER_CLEANER_INTERVAL}
+    volumes:
+      - /mnt/srt-sever/${SERVER_RECORD_DIR}:${SERVER_RECORD_DIR}
+
+  nginx-server:
+    image: nginx:alpine
+    container_name: nginx-server
+    volumes:
+      - /mnt/srt-sever/${SERVER_RECORD_DIR}:${SERVER_RECORD_DIR}:ro
+      - ../server/nginx-server/webpage/:/var/www/html/:ro
+      - ../server/nginx-server/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - tailscale-sc-server
+      - srt-server
+    network_mode: service:tailscale-sc-server
+    restart: unless-stopped
 
   # --------------------------
   # Watchtower for auto-updates
