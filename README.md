@@ -60,12 +60,105 @@ Make sure that WLS supports IPv6. In .wslconfig add
 networkingMode=mirrored
 ```
 
+## Having a camera device
 
-### Attaching camera to WSL (Development)
+As having a video feed is part of the development that are two option.
+
+#### Option 1: Attaching camera to WSL (I.e use your own camera)
 Run the following in PowerShell (as Administrator):
 ```ps1
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 \\wsl.localhost\<Path-to-Repo>\srt-tailscale\Manage-WSL-Camera.ps1
+```
+
+### Option 2: Creating a virtual camera
+This requires v4l2loopback, but wsl does not support Linux video devices. Lucky we can add this support to the kernel. This will take between 10-30 mins.
+
+#### 1. Rebuild the kernel in WSL:
+```sh
+cd ~
+git clone https://github.com/microsoft/WSL2-Linux-Kernel.git
+cd WSL2-Linux-Kernel
+# Set wsl config as default config (.config)
+cp Microsoft/config-wsl .config
+
+# Add required config
+sed -i 's/^CONFIG_MEDIA_SUPPORT=.*/CONFIG_MEDIA_SUPPORT=y/' .config
+sed -i 's/^CONFIG_MEDIA_CAMERA_SUPPORT=.*/CONFIG_MEDIA_CAMERA_SUPPORT=y/' .config
+sed -i 's/^CONFIG_VIDEO_DEV=.*/CONFIG_VIDEO_DEV=y/' .config
+
+# Build (Will be built to arch/x86/boot/bzImage)
+make -j "$(nproc)"
+
+# Copy kernel to Windows so that we can tell WSL2 to use it
+cp arch/x86/boot/bzImage /mnt/c/<Your preferred path>/wsl-bzImage
+```
+
+#### 2. Tell windows to use our built kernel when running WSL
+This is done but editing the .wslconfig (Normally in %UserProfile%\.wslconfig)
+```bash
+# Add this line to .wslconfig
+# kernel=C:\\<Your preferred path>\\wsl-bzImage
+# Example
+kernel=C:\\Users\\alaa\\wsl-bzImage
+```
+
+#### 3. Restart WSL
+```bash
+wsl --shutdown
+wsl
+```
+
+#### 4. Build v4l2loopback
+```sh
+cd ~
+git clone https://github.com/umlaeute/v4l2loopback.git
+cd v4l2loopback
+
+# Create Makefile.wsl
+cat << 'EOF' > Makefile.wsl
+obj-m := v4l2loopback.o
+
+KDIR := $(HOME)/WSL2-Linux-Kernel
+
+all:
+        make -C $(KDIR) M=$(PWD) modules
+
+clean:
+        make -C $(KDIR) M=$(PWD) clean
+EOF
+
+# Build
+make -f Makefile.wsl
+
+# Copy built libs
+sudo mkdir -p /lib/modules/$(uname -r)/extra
+sudo cp v4l2loopback.ko /lib/modules/$(uname -r)/extra/
+sudo depmod -a
+```
+
+#### 5. Create devices
+Quick demo on how to create devices and simulate a camera.
+
+Add devices 
+```sh
+# Exmaple for 3 devices at /dev/video0, /dev/video1, /dev/video2
+sudo modprobe v4l2loopback video_nr=0,1,2 card_label="FakeCam" exclusive_caps=1
+```
+
+Remove devices:
+```sh
+sudo modprobe -r v4l2loopback
+```
+
+Feed a feed to /dev/video0
+```sh
+ffmpeg -f lavfi -i testsrc=size=1280x720:rate=30 -f v4l2 -vcodec rawvideo /dev/video0
+```
+
+View the feed
+```sh
+ffplay /dev/video0
 ```
 
 ## Deploy to a VPS / production
