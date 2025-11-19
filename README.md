@@ -60,7 +60,7 @@ Make sure that WLS supports IPv6. In .wslconfig add
 networkingMode=mirrored
 ```
 
-## Having a camera device
+### Having a camera device
 
 As having a video feed is part of the development that are two option.
 
@@ -71,10 +71,10 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 \\wsl.localhost\<Path-to-Repo>\srt-tailscale\Manage-WSL-Camera.ps1
 ```
 
-### Option 2: Creating a virtual camera
+#### Option 2: Creating a virtual camera
 This requires v4l2loopback, but wsl does not support Linux video devices. Lucky we can add this support to the kernel. This will take between 10-30 mins.
 
-#### 1. Rebuild the kernel in WSL:
+##### 1. Rebuild the kernel in WSL:
 ```sh
 cd ~
 git clone https://github.com/microsoft/WSL2-Linux-Kernel.git
@@ -94,7 +94,7 @@ make -j "$(nproc)"
 cp arch/x86/boot/bzImage /mnt/c/<Your preferred path>/wsl-bzImage
 ```
 
-#### 2. Tell windows to use our built kernel when running WSL
+##### 2. Tell windows to use our built kernel when running WSL
 This is done but editing the .wslconfig (Normally in %UserProfile%\.wslconfig)
 ```bash
 # Add this line to .wslconfig
@@ -103,13 +103,13 @@ This is done but editing the .wslconfig (Normally in %UserProfile%\.wslconfig)
 kernel=C:\\Users\\alaa\\wsl-bzImage
 ```
 
-#### 3. Restart WSL
+##### 3. Restart WSL
 ```bash
 wsl --shutdown
 wsl
 ```
 
-#### 4. Build v4l2loopback
+##### 4. Build v4l2loopback
 ```sh
 cd ~
 git clone https://github.com/umlaeute/v4l2loopback.git
@@ -137,7 +137,7 @@ sudo cp v4l2loopback.ko /lib/modules/$(uname -r)/extra/
 sudo depmod -a
 ```
 
-#### 5. Create devices
+##### 5. Create devices
 Quick demo on how to create devices and simulate a camera.
 
 Add devices 
