@@ -14,4 +14,4 @@ ffmpeg  -i "http://localhost:8080/?action=stream" \
         -f segment \
         -segment_time $ARCHIVE_SEGMENT_DURATION \
         -strftime 1 \
-        "$CLIENT_RECORD_DIR/%Y_%m_%d-%H_%M_%S.mp4"
+        "/archive/%Y_%m_%d-%H_%M_%S.mp4"

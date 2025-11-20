@@ -18,7 +18,6 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY streamer.sh /usr/local/bin/
 COPY ffmpeg_local_recorder.sh /usr/local/bin/
 COPY ffmpeg_srt_sender.sh /usr/local/bin/
-COPY record_cleaner.sh /usr/local/bin/
+COPY archive_cleaner.sh /usr/local/bin/
 
-RUN mkdir -p /logs/
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -14,6 +14,6 @@ COPY --from=build /usr/local/lib/libsrt* /usr/local/lib/
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY ffmpeg_srt_receiver.sh /usr/local/bin/
 COPY backup_archive.sh /usr/local/bin/
-COPY record_cleaner.sh /usr/local/bin/
+COPY archive_cleaner.sh /usr/local/bin/
 
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

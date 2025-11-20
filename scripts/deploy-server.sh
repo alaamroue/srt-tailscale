@@ -54,18 +54,18 @@ command -v docker >/dev/null 2>&1 || {
   exit 1
 }
 
-docker compose $COMPOSE_FILES pull || log WARN "Pull failed or skipped for dev"
+docker compose -p server $COMPOSE_FILES pull || log WARN "Pull failed or skipped for dev"
 
-docker compose $COMPOSE_FILES build --pull || {
+docker compose -p server $COMPOSE_FILES build --pull || {
     log ERROR "Docker build failed"
     exit 1
 }
 
-docker compose $COMPOSE_FILES up -d || {
+docker compose -p server $COMPOSE_FILES up -d || {
     log ERROR "Compose up failed"
     exit 1
 }
 
-docker compose $COMPOSE_FILES ps || log WARN "Unable to check container status"
+docker compose -p server $COMPOSE_FILES ps || log WARN "Unable to check container status"
 
 log INFO "Deployment complete for $ENVIRONMENT mode!"

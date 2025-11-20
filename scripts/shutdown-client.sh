@@ -57,13 +57,13 @@ if [[ ! -f "$CLIENT_COMPOSE_FILE" ]]; then
 fi
 
 log INFO "Docker: Running docker compose down"
-if ! docker compose -f "$CLIENT_COMPOSE_FILE" down; then
+if ! docker compose -p client -f "$CLIENT_COMPOSE_FILE" down; then
     log ERROR "Docker compose down failed"
     exit 1
 fi
 
 log INFO "Shutdown complete!"
-if ! docker compose -f "$CLIENT_COMPOSE_FILE" ps -q; then
+if ! docker compose -p client -f "$CLIENT_COMPOSE_FILE" ps -q; then
     log WARN "Could not check container status"
 else
     log INFO "All containers are stopped."

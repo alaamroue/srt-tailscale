@@ -3,14 +3,12 @@ set -eu
 
 echo "Starting backup_archive.sh..."
 
-IP=$(getent hosts srt-client-1 | awk '{print $1}')
+IP=$(getent hosts srt-client | awk '{print $1}')
 echo "Client IP resolved to: $IP"
 
-mkdir -p $SERVER_RECORD_DIR
-
 echo "Starting rclone sync from client to server directory..."
-rclone sync     :http: $SERVER_RECORD_DIR \
-                --http-url "http://$IP/videos/" \
+rclone sync     :http: /archive \
+                --http-url "http://$IP/archive/" \
                 --min-age 1m \
                 --transfers 4 \
                 --checkers 8 \

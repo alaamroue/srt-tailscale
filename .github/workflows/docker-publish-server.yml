@@ -5,8 +5,8 @@ on:
     branches:
       - master
     paths:
-      - 'server/srt-server/Dockerfile'
-      - 'server/srt-server/**'
+      - 'infra/srt-server/Dockerfile'
+      - 'infra/srt-server/**'
     tags:
       - 'v*'
 
@@ -76,8 +76,8 @@ jobs:
       - name: Build & Push (multi-registry)
         uses: docker/build-push-action@v6
         with:
-          context: ./server/srt-server
-          file: ./server/srt-server/Dockerfile
+          context: ./infra/srt-server
+          file: ./infra/srt-server/Dockerfile
           platforms: ${{ github.event.inputs.platforms || 'linux/amd64,linux/arm64' }} # Add later: linux/arm/v7,linux/arm/v6
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push_image != 'false') }}
           cache-from: type=gha

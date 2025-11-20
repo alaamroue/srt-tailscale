@@ -76,6 +76,8 @@ This requires v4l2loopback, but wsl does not support Linux video devices. Lucky 
 
 ##### 1. Rebuild the kernel in WSL:
 ```sh
+sudo apt install build-essential flex bison dwarves libssl-dev libelf-dev cpio qemu-utils
+
 cd ~
 git clone https://github.com/microsoft/WSL2-Linux-Kernel.git
 cd WSL2-Linux-Kernel
@@ -140,7 +142,7 @@ sudo depmod -a
 ##### 5. Create devices
 Quick demo on how to create devices and simulate a camera.
 
-Add devices 
+Add devices:
 ```sh
 # Exmaple for 3 devices at /dev/video0, /dev/video1, /dev/video2
 sudo modprobe v4l2loopback video_nr=0,1,2 card_label="FakeCam" exclusive_caps=1
@@ -151,12 +153,12 @@ Remove devices:
 sudo modprobe -r v4l2loopback
 ```
 
-Feed a feed to /dev/video0
+Feed a feed to /dev/video0:
 ```sh
 ffmpeg -f lavfi -i testsrc=size=1280x720:rate=30 -f v4l2 -vcodec rawvideo /dev/video0
 ```
 
-View the feed
+View the feed:
 ```sh
 ffplay /dev/video0
 ```
