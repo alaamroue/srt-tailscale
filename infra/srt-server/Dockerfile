@@ -7,13 +7,14 @@ RUN ./configure && make -j8 && make install
 
 # Final stage
 FROM alpine:latest
-RUN apk --no-cache add ffmpeg supervisor rclone
+RUN apk --no-cache add ffmpeg supervisor rclone python3
 COPY --from=build /usr/local/bin/srt-* /usr/local/bin/
 COPY --from=build /usr/local/lib/libsrt* /usr/local/lib/
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY ffmpeg_srt_receiver.sh /usr/local/bin/
-COPY backup_archive.sh /usr/local/bin/
-COPY archive_cleaner.sh /usr/local/bin/
+COPY archive_syncer.sh /usr/local/bin/
+COPY stream_saver.sh /usr/local/bin/
+COPY stream_cleaner.sh /usr/local/bin/
+COPY stream_cleaner.py /usr/local/bin/
 
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

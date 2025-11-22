@@ -1,23 +1,25 @@
-
-
 services:
   # --------------------------
   # Tailscale sidecar
   # --------------------------
   tailscale-sc-client:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale:stable
     container_name: tailscale-sc-client
     hostname: srt-client
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY_CLIENT}
       - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_ACCEPT_DNS=true
     volumes:
       - tailscale-state-client:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     restart: unless-stopped
+    command: tailscaled
     labels:
       - watchtower.group=client
       - com.centurylinklabs.watchtower.enable=true
@@ -41,16 +43,15 @@ services:
     devices:
       - ${CLIENT_VIDEO_DEVICE}:/dev/video0
     environment:
-      - SRT_PORT=1936
       - CLIENT_STREAM_RESOLUTION=${CLIENT_STREAM_RESOLUTION}
       - CLIENT_LOCAL_ENCODER=${CLIENT_LOCAL_ENCODER}
       - CLIENT_LOCAL_ENCODER_CRF=${CLIENT_LOCAL_ENCODER_CRF}
       - CLIENT_LOCAL_ENCODER_PRESET=${CLIENT_LOCAL_ENCODER_PRESET}
-      - ARCHIVE_SEGMENT_DURATION=${ARCHIVE_SEGMENT_DURATION}
-      - CLIENT_RETENTION_PERIOD=${CLIENT_RETENTION_PERIOD}
-      - CLIENT_CLEANER_INTERVAL=${CLIENT_CLEANER_INTERVAL}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - /mnt/srt-client/archive:/archive
+      - ./srt-client/motion_detector_config.txt:/motion_detector_config.txt
 
   nginx-client:
     #image: alaamr/nginx-client:latest

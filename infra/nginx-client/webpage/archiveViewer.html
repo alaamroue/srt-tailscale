@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Raspberry Pi Camera</title>
+  <meta charset="utf-8" />
+  <title>Archive Viewer – Raspberry Pi Camera</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -38,8 +38,8 @@
 
     .card {
       width: 100%;
-      max-width: 420px;
-      padding: 26px 24px 24px;
+      max-width: 780px;
+      padding: 24px 22px 20px;
       background: radial-gradient(circle at top left, #020617 0, #020617 40%, #020617 100%);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-soft);
@@ -76,7 +76,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .badge-dot {
@@ -88,7 +88,7 @@
     }
 
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       margin-bottom: 6px;
       letter-spacing: -0.02em;
     }
@@ -96,101 +96,56 @@
     .sub {
       font-size: 0.9rem;
       color: var(--text-muted);
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       line-height: 1.5;
     }
 
-    .button-group {
-      display: grid;
-      gap: 10px;
+    .video-frame {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      background: #000;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.9);
+    }
+
+    #video {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+
+    .status {
+      font-size: 0.8rem;
+      color: var(--text-muted);
       margin-top: 8px;
     }
 
-    .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      background-color: rgba(15, 23, 42, 0.88);
-      text-decoration: none;
-      color: var(--text-main);
-      font-size: 0.95rem;
-      font-weight: 500;
-      letter-spacing: 0.01em;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      transition:
-        background-color var(--transition-fast),
-        border-color var(--transition-fast),
-        transform var(--transition-fast),
-        box-shadow var(--transition-fast),
-        color var(--transition-fast);
-      box-shadow: 0 13px 25px rgba(15, 23, 42, 0.65);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #0ea5e9);
-      border-color: transparent;
-      color: #0b1120;
-      box-shadow: 0 18px 35px rgba(56, 189, 248, 0.45);
-    }
-
-    .btn-secondary {
-      background-color: rgba(15, 23, 42, 0.9);
-    }
-
-    .btn-tertiary {
-      background-color: var(--accent-soft);
-      border-style: dashed;
-    }
-
-    .btn span {
-      opacity: 0.9;
-    }
-
-    .btn small {
-      font-size: 0.75rem;
-      opacity: 0.7;
-      margin-left: 6px;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      background-color: rgba(15, 23, 42, 1);
-      border-color: rgba(148, 163, 184, 0.9);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
-    }
-
-    .btn-primary:hover {
-      filter: brightness(1.04);
-      box-shadow: 0 22px 48px rgba(56, 189, 248, 0.6);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.75);
-    }
-
     .footer {
-      margin-top: 18px;
-      font-size: 0.75rem;
+      margin-top: 16px;
+      font-size: 0.8rem;
       color: var(--text-muted);
       display: flex;
       justify-content: space-between;
       gap: 8px;
-      opacity: 0.8;
+      opacity: 0.85;
+      flex-wrap: wrap;
     }
 
-    .footer span {
-      white-space: nowrap;
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color var(--transition-fast);
+    }
+
+    .footer a:hover {
+      border-color: var(--accent-soft);
     }
 
     @media (max-width: 480px) {
       .card {
         margin: 16px;
-        padding: 22px 18px 20px;
+        padding: 20px 16px 18px;
       }
     }
   </style>
@@ -203,36 +158,61 @@
         <span>Pi Camera</span>
       </div>
 
-      <h1>Camera Control Center</h1>
-      <p class="sub">Quick access to your Raspberry&nbsp;Pi camera live stream and recordings.</p>
+      <h1>Archive Viewer</h1>
+      <p class="sub">Playing the archived HLS stream from <code>/archive/playlist.m3u8</code>.</p>
 
-      <div class="button-group">
-        <a class="btn btn-primary" href="/stream">
-          <span>Live Stream</span>
-          <small>/stream</small>
-        </a>
-
-        <a class="btn btn-secondary" href="/archive">
-          <span>Recordings Archive</span>
-          <small>/archive</small>
-        </a>
-
-        <a class="btn btn-tertiary" href="/archiveViewer.html">
-          <span>Archive Viewer</span>
-          <small>/archiveViewer.html</small>
-        </a>
-
-        <a class="btn btn-tertiary" href="/supervisor">
-          <span>Supervisor</span>
-          <small>/supervisor</small>
-        </a>
+      <div class="video-frame">
+        <video id="video" controls playsinline></video>
       </div>
 
+      <p id="status" class="status"></p>
+
       <div class="footer">
-        <span>Online</span>
         <span>Raspberry&nbsp;Pi&nbsp;Camera</span>
+        <span>
+          <a href="/">Home</a> ·
+          <a href="/archive">Archive list</a>
+        </span>
       </div>
     </div>
   </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const video = document.getElementById('video');
+    const statusEl = document.getElementById('status');
+    const src = '/archive/playlist.m3u8';
+
+    function setStatus(msg) {
+      if (statusEl) statusEl.textContent = msg || '';
+    }
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        setStatus('Ready to play archive stream.');
+        video.play().catch(() => {
+          setStatus('Click play to start the archive.');
+        });
+      });
+      hls.on(Hls.Events.ERROR, function () {
+        setStatus('There was a problem loading the archive stream.');
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari / iOS
+      video.src = src;
+      video.addEventListener('loadedmetadata', () => {
+        setStatus('Ready to play archive stream.');
+        video.play().catch(() => {
+          setStatus('Click play to start the archive.');
+        });
+      });
+    } else {
+      console.error('HLS not supported in this browser');
+      setStatus('This browser does not support HLS playback.');
+    }
+  </script>
 </body>
 </html>

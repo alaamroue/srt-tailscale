@@ -9,15 +9,16 @@ RUN make && make install
 
 # Final stage
 FROM alpine:latest
-RUN apk --no-cache add ffmpeg supervisor font-dejavu
+RUN apk --no-cache add ffmpeg supervisor font-dejavu py3-opencv jq curl
 COPY --from=build /usr/local/bin/mjpg_streamer /usr/local/bin/
 COPY --from=build /usr/local/lib/mjpg-streamer/ /usr/local/lib/mjpg-streamer/
 
 # Copy supervisor scripts
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY streamer.sh /usr/local/bin/
-COPY ffmpeg_local_recorder.sh /usr/local/bin/
-COPY ffmpeg_srt_sender.sh /usr/local/bin/
-COPY archive_cleaner.sh /usr/local/bin/
+COPY recorder.sh /usr/local/bin/
+COPY motion_detector.py /usr/local/bin/
+COPY telegram_listener.sh /usr/local/bin/
+COPY telegram_send_capture.sh /usr/local/bin/
 
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

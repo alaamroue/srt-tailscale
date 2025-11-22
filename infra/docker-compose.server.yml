@@ -5,18 +5,21 @@ services:
   # Tailscale sidecar
   # --------------------------
   tailscale-sc-server:
-    image: tailscale/tailscale:latest
+    image: tailscale/tailscale:stable
     container_name: tailscale-sc-server
     hostname: srt-server
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY_SERVER}
       - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_ACCEPT_DNS=true
     volumes:
       - tailscale-state-server:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     restart: unless-stopped
     labels:
       - watchtower.group=server
@@ -38,14 +41,6 @@ services:
     labels:
       - watchtower.group=server
       - com.centurylinklabs.watchtower.enable=true
-    environment:
-      - SRT_PORT=1936
-      - SERVER_LOCAL_ENCODER=${SERVER_LOCAL_ENCODER}
-      - SERVER_LOCAL_ENCODER_CRF=${SERVER_LOCAL_ENCODER_CRF}
-      - SERVER_LOCAL_ENCODER_PRESET=${SERVER_LOCAL_ENCODER_PRESET}
-      - ARCHIVE_SEGMENT_DURATION=${ARCHIVE_SEGMENT_DURATION}
-      - SERVER_RETENTION_PERIOD=${SERVER_RETENTION_PERIOD}
-      - SERVER_CLEANER_INTERVAL=${SERVER_CLEANER_INTERVAL}
     volumes:
       - /mnt/srt-sever/archive:/archive
       - /mnt/srt-sever/recordings:/recordings
