@@ -10,12 +10,12 @@ import subprocess
 CONFIG_DEFAULTS = {
     "STREAM_URL": "http://localhost:8080/?action=stream",
     "THRESHOLD_VALUE": 8,
-    "COOLDOWN_SECONDS": 0.2,
+    "COOLDOWN_SECONDS": 0.8,
     "MIN_MOTION_AREA": 80,
     "MOTION_FRAMES_REQUIRED": 2,
     "BACKGROUND_LEARNING_RATE": 0.02,
     "FRAME_WIDTH": 640,
-    "START_DELAY": 5
+    "START_DELAY": 10
 }
 
 CONFIG_FILE = "motion_detector_config.txt"
@@ -62,7 +62,8 @@ def main():
     background = None
     motion_counter = 0
     last_motion_time = None
-    detector_start_time = now
+    detector_start_time = datetime.datetime.now()
+    print("detector_start_time:", detector_start_time)
 
     while True:
         ret, frame = cap.read()
@@ -100,9 +101,11 @@ def main():
 
         if motion_counter >= config["MOTION_FRAMES_REQUIRED"]:
             now = datetime.datetime.now()
+            print("now:", now)
+            print("(now - detector_start_time).total_seconds():", (now - detector_start_time).total_seconds())
             if (
-                last_motion_time is None
-                or (now - last_motion_time).total_seconds() >= config["COOLDOWN_SECONDS"]
+                (last_motion_time is None
+                or (now - last_motion_time).total_seconds() >= config["COOLDOWN_SECONDS"])
                 and (now - detector_start_time).total_seconds() >= config["START_DELAY"]
             ):
                 timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")

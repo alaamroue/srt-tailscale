@@ -14,7 +14,7 @@ set -eu
 : "${TELEGRAM_CHAT_ID:?Please export TELEGRAM_CHAT_ID=your_telegram_chat_id}"
 
 API_URL="https://api.telegram.org/bot${TELEGRAM_TOKEN}"
-CONFIG_FILE="/home/ubuntu/srt-tailscale/infra/srt-client/motion_detector_config.txt"
+CONFIG_FILE="/motion_detector_config.txt"
 STREAM_URL="http://srt-client/stream"
 
 # Setup
@@ -26,7 +26,7 @@ set_state() {
 }
 
 get_state() {
-	cat "${TELEGRAM_CHAT_ID}.state"
+	cat -- "${TELEGRAM_CHAT_ID}.state"
 }
 
 clear_state() {
@@ -47,9 +47,9 @@ set_config() {
 	var=$1
 	val=$2
 
-    current_val="$(get_config "$var")"
-    if [ "$current_val" != "$val" ]; then
-        send_message "⚙️ *${var}* changed: *${current_val}* → *${val}*"
+	current_val="$(get_config "$var")"
+	if [ "$current_val" != "$val" ]; then
+		send_message "⚙️ *${var}* changed: *${current_val}* → *${val}*"
 		if grep -q "^$var=" "$CONFIG_FILE"; then
 			tmp="${CONFIG_FILE}.tmp.$$"
 			sed "s|^$var=.*|$var=$val|" "$CONFIG_FILE" >"$tmp" &&
@@ -100,12 +100,12 @@ send_options_menu() {
         {"text":"⚙️ Set config","callback_data":"SET_MENU"}
       ],
       [
-        {"text":"📖 Turn off Stream","callback_data":"ON_STREAM"},
-        {"text":"⚙️ Turn On Stream","callback_data":"OFF_STREAM"}
+        {"text":"🎥🟢 Turn On Stream","callback_data":"ON_STREAM"},
+        {"text":"🎥🔴 Turn off Stream","callback_data":"OFF_STREAM"}
       ],
       [
-        {"text":"📖 Turn off motion detection","callback_data":"ON_MOTION"},
-        {"text":"⚙️ Turn on motion detection","callback_data":"OFF_MOTION"}
+        {"text":"🎯🟢 Turn on motion detection","callback_data":"ON_MOTION"},
+        {"text":"🎯🔴 Turn off motion detection","callback_data":"OFF_MOTION"}
       ]
     ]
   }'
@@ -114,28 +114,28 @@ send_options_menu() {
 }
 
 reload_config() {
-    send_message "🔄 Restarting motion detector…"
+	send_message "🔄 Restarting motion detector…"
 	supervisorctl restart motion_detector
 }
 
 motion_detector_off() {
-    send_message "🛑 Motion detection is now OFF."
+	send_message "🛑 Motion detection is now OFF."
 	supervisorctl stop motion_detector
 }
 
 motion_detector_on() {
-    send_message "🎯 Motion detection is now ON!"
+	send_message "🎯 Motion detection is now ON!"
 	supervisorctl start motion_detector
 }
 
 stream_on() {
-    send_message "📹 Live stream activated!"
+	send_message "📹 Live stream activated!"
 	supervisorctl start streamer
 }
 
 stream_off() {
-    send_message "🚫 Live stream stopped."
-	supervisorctl start streamer
+	send_message "🚫 Live stream stopped."
+	supervisorctl stop streamer
 }
 
 send_stream_link() {
@@ -144,8 +144,8 @@ send_stream_link() {
 
 reset_config() {
 	send_message "Reseting Config..."
-	set_config THRESHOLD_VALUE 15
-	set_config COOLDOWN_SECONDS 1.2
+	set_config THRESHOLD_VALUE 25
+	set_config COOLDOWN_SECONDS 0.8
 	set_config MIN_MOTION_AREA 80
 	set_config MOTION_FRAMES_REQUIRED 2
 	set_config BACKGROUND_LEARNING_RATE 0.02
@@ -168,11 +168,10 @@ EOF
 }
 
 run_capture() {
-	if [ -x "./capture.sh" ]; then
-		./telegram_send_capture.sh &
-		send_message "Started *capture.sh* ✅"
+	if [ -x "/usr/local/bin/telegram_send_capture.sh" ]; then
+		telegram_send_capture.sh "Capture: " &
 	else
-		send_message "⚠️ *capture.sh* not found or not executable."
+		send_message "⚠️ *telegram_send_capture.sh* not found or not executable."
 	fi
 }
 
@@ -203,17 +202,44 @@ send_set_menu() {
 send_value_menu() {
 	var="$1"
 
+	v="$(get_config "$var")" # current value
+	echo "v is $v"
+	case $v in
+	*.*) # treat as float
+		# one decimal place, rounded
+		set -- $(awk -v v="$v" 'BEGIN {
+            printf "%.1f %.1f %.1f %.1f\n", v/4, v/2, v*2, v*4
+        }')
+		div4=$1
+		div2=$2
+		mul2=$3
+		mul4=$4
+		;;
+	*) # treat as int
+		# integer arithmetic; truncates toward 0
+		div4=$((v / 4))
+		div2=$((v / 2))
+		mul2=$((v * 2))
+		mul4=$((v * 4))
+		;;
+	esac
+	echo "v is $v"
+	echo "div4 is $div4" 
+	echo "div2 is $div2" 
+	echo "mul2 is $mul2" 
+	echo "mul4 is $mul4" 
+
 	markup="
   {
     \"inline_keyboard\":
     [
       [
-        {\"text\":\"10\",\"callback_data\":\"SET_VAL|$var|10\"},
-        {\"text\":\"20\",\"callback_data\":\"SET_VAL|$var|20\"},
-        {\"text\":\"30\",\"callback_data\":\"SET_VAL|$var|30\"}
+        {\"text\":\"$div4\",\"callback_data\":\"SET_VAL|$var|$div4\"},
+        {\"text\":\"$div2\",\"callback_data\":\"SET_VAL|$var|$div2\"}
       ],
       [
-        {\"text\":\"60\",\"callback_data\":\"SET_VAL|$var|60\"}
+        {\"text\":\"$mul2\",\"callback_data\":\"SET_VAL|$var|$mul2\"},
+        {\"text\":\"$mul4\",\"callback_data\":\"SET_VAL|$var|$mul4\"}
       ]
     ]
   }"
@@ -387,6 +413,7 @@ handle_callback_update() {
 			reload_config
 			send_current_config
 		else
+			set_state "AWAIT_NUMBER|$var"
 			send_value_menu "$var"
 			answer_callback "$callback_id" "Choose a value for ${var}"
 		fi
@@ -410,8 +437,9 @@ handle_callback_update() {
 handle_update() {
 	update="$1"
 
-	chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
+	chat_id=$(echo "$update" | jq -r '.message.chat.id // .callback_query.message.chat.id // empty')
 	if [ -z "$chat_id" ] || [ "$chat_id" != "$TELEGRAM_CHAT_ID" ]; then
+		echo "Ignored"
 		return
 	fi
 
@@ -423,7 +451,6 @@ handle_update() {
 		handle_callback_update "$update"
 	fi
 }
-
 
 echo "Bot started. Press Ctrl+C to stop."
 
