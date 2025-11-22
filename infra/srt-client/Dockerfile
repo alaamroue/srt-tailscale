@@ -1,17 +1,14 @@
 # Build stage
 FROM alpine:latest AS build
-RUN apk add --no-cache git build-base cmake linux-headers jpeg-dev
-RUN git clone https://github.com/jacksonliam/mjpg-streamer.git /tmp/mjpg-streamer
-WORKDIR /tmp/mjpg-streamer/mjpg-streamer-experimental
-RUN sed -i 's/v4l2uvc.c)/v4l2uvc.c ..\/..\/utils.c)/' plugins/input_uvc/CMakeLists.txt && \
-    sed -i '/#include <linux\/stat.h>/d' utils.c
+RUN apk add --no-cache git build-base linux-headers libevent-dev libbsd-dev libjpeg-turbo-dev musl-dev
+RUN git clone https://github.com/pikvm/ustreamer /tmp/ustreamer
+WORKDIR /tmp/ustreamer
 RUN make && make install
 
 # Final stage
 FROM alpine:latest
-RUN apk --no-cache add ffmpeg supervisor font-dejavu py3-opencv jq curl
-COPY --from=build /usr/local/bin/mjpg_streamer /usr/local/bin/
-COPY --from=build /usr/local/lib/mjpg-streamer/ /usr/local/lib/mjpg-streamer/
+RUN apk --no-cache add ffmpeg supervisor font-dejavu py3-opencv jq curl libevent
+COPY --from=build /usr/local/bin/ustreamer /usr/local/bin/
 
 # Copy supervisor scripts
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
