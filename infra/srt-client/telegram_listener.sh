@@ -47,11 +47,15 @@ set_config() {
 	var=$1
 	val=$2
 
-	if grep -q "^$var=" "$CONFIG_FILE"; then
-		tmp="${CONFIG_FILE}.tmp.$$"
-		sed "s|^$var=.*|$var=$val|" "$CONFIG_FILE" >"$tmp" &&
-			cat "$tmp" >"$CONFIG_FILE" &&
-			rm -f "$tmp"
+    current_val="$(get_config "$var")"
+    if [ "$current_val" != "$val" ]; then
+        send_message "⚙️ *${var}* changed: *${current_val}* → *${val}*"
+		if grep -q "^$var=" "$CONFIG_FILE"; then
+			tmp="${CONFIG_FILE}.tmp.$$"
+			sed "s|^$var=.*|$var=$val|" "$CONFIG_FILE" >"$tmp" &&
+				cat "$tmp" >"$CONFIG_FILE" &&
+				rm -f "$tmp"
+		fi
 	fi
 }
 
@@ -94,11 +98,44 @@ send_options_menu() {
       [
         {"text":"📖 Read config","callback_data":"GET_CONFIG"},
         {"text":"⚙️ Set config","callback_data":"SET_MENU"}
+      ],
+      [
+        {"text":"📖 Turn off Stream","callback_data":"ON_STREAM"},
+        {"text":"⚙️ Turn On Stream","callback_data":"OFF_STREAM"}
+      ],
+      [
+        {"text":"📖 Turn off motion detection","callback_data":"ON_MOTION"},
+        {"text":"⚙️ Turn on motion detection","callback_data":"OFF_MOTION"}
       ]
     ]
   }'
 
 	send_message "Choose an action:" "$markup"
+}
+
+reload_config() {
+    send_message "🔄 Restarting motion detector…"
+	supervisorctl restart motion_detector
+}
+
+motion_detector_off() {
+    send_message "🛑 Motion detection is now OFF."
+	supervisorctl stop motion_detector
+}
+
+motion_detector_on() {
+    send_message "🎯 Motion detection is now ON!"
+	supervisorctl start motion_detector
+}
+
+stream_on() {
+    send_message "📹 Live stream activated!"
+	supervisorctl start streamer
+}
+
+stream_off() {
+    send_message "🚫 Live stream stopped."
+	supervisorctl start streamer
 }
 
 send_stream_link() {
@@ -221,13 +258,12 @@ handle_direct_set() {
 		;;
 	*)
 		send_message "Unknown variable used in /set. \nUsage example: /set THRESHOLD\_VALUE 20"
-    return
+		return
 		;;
 	esac
 
 	set_config "$var" "$value"
 	reload_config
-	send_message "✅ Updated *${var}* to *${value}*"
 	send_current_config
 }
 
@@ -273,7 +309,6 @@ handle_message_update() {
 				set_config "$var" "$value"
 				reload_config
 				clear_state
-				send_message "✅ Updated *${var}* to *${value}*"
 				send_current_config
 				return
 				;;
@@ -327,6 +362,22 @@ handle_callback_update() {
 		send_set_menu
 		answer_callback "$callback_id" ""
 		;;
+	"ON_STREAM")
+		stream_on
+		answer_callback "$callback_id" ""
+		;;
+	"OFF_STREAM")
+		stream_off
+		answer_callback "$callback_id" ""
+		;;
+	"ON_MOTION")
+		motion_detector_on
+		answer_callback "$callback_id" ""
+		;;
+	"OFF_MOTION")
+		motion_detector_off
+		answer_callback "$callback_id" ""
+		;;
 	SET_VAR\|*)
 		var=${data#SET_VAR|}
 
@@ -347,7 +398,6 @@ handle_callback_update() {
 
 		set_config "$var" "$value"
 		reload_config
-		send_message "✅ Updated *${var}* to *${value}*"
 		answer_callback "$callback_id" "Saved ${var}=${value}"
 		send_current_config
 		;;
@@ -360,6 +410,11 @@ handle_callback_update() {
 handle_update() {
 	update="$1"
 
+	chat_id=$(echo "$update" | jq -r '.message.chat.id // empty')
+	if [ -z "$chat_id" ] || [ "$chat_id" != "$TELEGRAM_CHAT_ID" ]; then
+		return
+	fi
+
 	if echo "$update" | jq -e '.message? // empty' >/dev/null; then
 		handle_message_update "$update"
 	fi
@@ -369,9 +424,6 @@ handle_update() {
 	fi
 }
 
-reload_config() {
-	echo "restart supervisor"
-}
 
 echo "Bot started. Press Ctrl+C to stop."
 
