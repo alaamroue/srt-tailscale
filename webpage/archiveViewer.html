@@ -197,8 +197,34 @@
           setStatus('Click play to start the archive.');
         });
       });
-      hls.on(Hls.Events.ERROR, function () {
+      hls.on(Hls.Events.ERROR, function (event, data) {
+        console.group('HLS error');
+        console.log('event:', event);
+        console.log('type:', data.type);      // e.g. NETWORK_ERROR, MEDIA_ERROR
+        console.log('details:', data.details); // e.g. MANIFEST_LOAD_ERROR
+        console.log('fatal:', data.fatal);
+        console.log('raw data:', data);
+        console.groupEnd();
+
         setStatus('There was a problem loading the archive stream.');
+
+        // Optional: react differently depending on error:
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.warn('Fatal network error, trying to recover…');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.warn('Fatal media error, trying to recover…');
+              hls.recoverMediaError();
+              break;
+            default:
+              console.error('Unrecoverable error, destroying hls instance');
+              hls.destroy();
+              break;
+          }
+        }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari / iOS

@@ -23,4 +23,5 @@ services:
       - "9001:9001"
     volumes:
       - ./srt-client/motion_detector_config.txt:/motion_detector_config.txt
+      - ./archive:/archive
     restart: unless-stopped
