@@ -36,7 +36,7 @@ curl_with_fallback() {
 	if response=$(
 		curl -sS -X POST "$API_URL/$endpoint" \
         	--connect-timeout 1 \
-        	--retry 2 \
+        	--retry 1 \
         	"$@" 
     ); then
 		log DEBUG "curl_with_fallback: Running curl without resolve. Success!"
@@ -64,6 +64,18 @@ curl_with_fallback() {
         	"$@"
     ); then
 		log DEBUG "curl_with_fallback: Running curl with resolve. Success!"
+        printf '%s\n' "$response"
+        return 0
+    fi
+
+	log DEBUG "curl_with_fallback: Running curl without resolve again"
+	if response=$(
+		curl -sS -X POST "$API_URL/$endpoint" \
+        	--connect-timeout 1 \
+        	--retry 4 \
+        	"$@" 
+    ); then
+		log DEBUG "curl_with_fallback: Running curl without resolve again. Success!"
         printf '%s\n' "$response"
         return 0
     fi

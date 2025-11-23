@@ -67,36 +67,6 @@ send_options_menu() {
 	send_message "Choose an action:" "$markup"
 }
 
-reload_config() {
-	log DEBUG "reload_config: called"
-	send_message "🔄 Restarting motion detector…"
-	supervisorctl restart motion_detector
-}
-
-motion_detector_off() {
-	log DEBUG "motion_detector_off: called"
-	send_message "🛑 Motion detection is now OFF."
-	supervisorctl stop motion_detector
-}
-
-motion_detector_on() {
-	log DEBUG "motion_detector_on: called"
-	send_message "🎯 Motion detection is now ON!"
-	supervisorctl start motion_detector
-}
-
-stream_on() {
-	log DEBUG "stream_on: called"
-	send_message "📹 Live stream activated!"
-	supervisorctl start streamer
-}
-
-stream_off() {
-	log DEBUG "stream_off: called"
-	send_message "🚫 Live stream stopped."
-	supervisorctl stop streamer
-}
-
 send_stream_link() {
 	log DEBUG "send_stream_link: called"
 	#todo: get this passed from host
