@@ -114,6 +114,9 @@ send_message() {
 	text=$(printf '%b' "$1") # turns \n into actual newlines
 	reply_markup="${2-}"
 
+	log DEBUG "send_message: Caching in parallel"
+	cache_telegram_ip &
+
 	log DEBUG "send_message: Sending message to chat: $TELEGRAM_CHAT_ID"
 	if [ -n "$reply_markup" ]; then
 		curl_with_fallback "sendMessage" \
