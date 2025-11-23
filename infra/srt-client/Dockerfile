@@ -7,11 +7,12 @@ RUN make && make install
 
 # Final stage
 FROM alpine:latest
-RUN apk --no-cache add ffmpeg supervisor font-dejavu py3-opencv jq curl libevent
+RUN apk --no-cache add ffmpeg supervisor font-dejavu py3-opencv jq curl libevent nginx
 COPY --from=build /usr/local/bin/ustreamer /usr/local/bin/
 
 #nginx
 COPY webpage/ /var/www/html/
+COPY nginx-base.conf /etc/nginx/nginx.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy supervisor scripts
@@ -21,5 +22,12 @@ COPY recorder.sh /usr/local/bin/
 COPY motion_detector.py /usr/local/bin/
 COPY telegram_listener.sh /usr/local/bin/
 COPY telegram_send_capture.sh /usr/local/bin/
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost/ || exit 1
+
+EXPOSE 80
+EXPOSE 8080
+EXPOSE 9001
 
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

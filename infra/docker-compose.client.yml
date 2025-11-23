@@ -1,23 +1,15 @@
 services:
-  # --------------------------
-  # SRT Live Client
-  # --------------------------
   srt-client:
-    #image: alaamr/srt-ts-client:latest
     build:
       context: ./srt-client/
       dockerfile: Dockerfile
     container_name: srt-client
-    #network_mode: service:tailscale-sc-client
-    #depends_on:
-    #  - tailscale-sc-client
-    restart: unless-stopped
     devices:
       - ${CLIENT_VIDEO_DEVICE}:/dev/video0
-      - /dev/video10:/dev/video10
-      - /dev/video11:/dev/video11
-      - /dev/video12:/dev/video12
-      - /dev/video18:/dev/video18
+      #- /dev/video10:/dev/video10
+      #- /dev/video11:/dev/video11
+      #- /dev/video12:/dev/video12
+      #- /dev/video18:/dev/video18
     environment:
       - CLIENT_STREAM_RESOLUTION=${CLIENT_STREAM_RESOLUTION}
       - CLIENT_LOCAL_ENCODER=${CLIENT_LOCAL_ENCODER}
@@ -25,21 +17,10 @@ services:
       - CLIENT_LOCAL_ENCODER_PRESET=${CLIENT_LOCAL_ENCODER_PRESET}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-    volumes:
-      - /mnt/srt-client/archive:/archive
-      - ./srt-client/motion_detector_config.txt:/motion_detector_config.txt
-
-  nginx-client:
-    build:
-      context: ./nginx-client/
-      dockerfile: Dockerfile
-    container_name: nginx-client
-    volumes:
-      - /mnt/srt-client/archive:/archive:ro
     ports:
       - "80:80"
       - "8080:8080"
       - "9001:9001"
-    depends_on:
-      - srt-client
+    volumes:
+      - ./srt-client/motion_detector_config.txt:/motion_detector_config.txt
     restart: unless-stopped
