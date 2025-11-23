@@ -28,16 +28,24 @@ TELEGRAM_IP_CACHE="/telegram_ip_cache.txt"
 
 curl_with_fallback() {
 	log DEBUG "curl_with_fallback: Called"
-	endpoint=$1
-	log DEBUG "curl_with_fallback: Endpoint: $endpoint"
-	shift
 
-	log DEBUG "send_message: Caching in parallel"
-	cache_telegram_ip &
+	if [ $# -lt 1 ]; then
+        log ERROR "curl_with_fallback: missing endpoint argument"
+        return 2
+    fi
+
+	endpoint=$1
+	shift
+	log DEBUG "curl_with_fallback: Endpoint: $endpoint"
+
+    method_opt=
+    if [ "$endpoint" != "getUpdates" ]; then
+        method_opt='-X POST'
+    fi
 
 	log DEBUG "curl_with_fallback: Running curl without resolve"
 	if response=$(
-		curl -sS -X POST "$API_URL/$endpoint" \
+		curl -sS $method_opt "$API_URL/$endpoint" \
         	--connect-timeout 1 \
         	--retry 1 \
         	"$@" 
@@ -49,7 +57,7 @@ curl_with_fallback() {
 
 	log DEBUG "curl_with_fallback: Running curl with resolve."
     if response=$(
-		curl -sS -X POST "$API_URL/$endpoint" \
+		curl -sS $method_opt "$API_URL/$endpoint" \
         	--connect-timeout 10 \
         	--resolve "${TELEGRAM_MAIN_HOST}:443:$(get_cached_telegram_ip)" \
         	"$@"
@@ -61,7 +69,7 @@ curl_with_fallback() {
 
 	log DEBUG "curl_with_fallback: Running curl with ipv4 ip."
     if response=$(
-		curl -sS -X POST "$API_URL/$endpoint" \
+		curl -sS $method_opt "$API_URL/$endpoint" \
         	--connect-timeout 10 \
         	--resolve "${TELEGRAM_MAIN_HOST}:443:$TELEGRAM_IPV4_IP" \
         	"$@"
@@ -73,7 +81,7 @@ curl_with_fallback() {
 
 	log DEBUG "curl_with_fallback: Running curl without resolve again"
 	if response=$(
-		curl -sS -X POST "$API_URL/$endpoint" \
+		curl -sS $method_opt "$API_URL/$endpoint" \
         	--connect-timeout 1 \
         	--retry 4 \
         	"$@" 

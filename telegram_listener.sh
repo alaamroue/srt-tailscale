@@ -422,6 +422,15 @@ handle_update() {
 
 log DEBUG "Bot started."
 
+# Cacher
+(
+  while :; do
+    cache_telegram_ip
+    sleep 300  # 300 seconds = 5 minutes
+  done
+) &
+
+# Main loop
 LAST_UPDATE_ID=0
 while true; do
 	log DEBUG "Main Loop: Checking Updates"
