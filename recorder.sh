@@ -9,8 +9,7 @@ ffmpeg \
   -use_wallclock_as_timestamps 1 \
   -fflags +genpts \
   -i "http://localhost:8080/?action=stream" \
-  -c:v "$CLIENT_LOCAL_ENCODER" \
-  -b:v 1500k -maxrate 1500k -bufsize 3000k \
+  -c:v libx264 -preset veryfast -tune zerolatency \
   -vf "format=yuv420p,fps=30,drawtext=fontfile=/usr/share/fonts/dejavu/DejaVuSans.ttf:text='%{localtime} UTC':x=W-tw-10:y=10:fontcolor=white:box=1:boxcolor=0x00000099" \
   -f hls \
   -hls_time 5 \

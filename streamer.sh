@@ -6,4 +6,5 @@ exec ustreamer \
 	--host=0.0.0.0 \
 	--port=8080 \
 	--format=MJPEG \
-	-r $CLIENT_STREAM_RESOLUTION
+	-r $CLIENT_STREAM_RESOLUTION \
+	--drop-same-frames=30
