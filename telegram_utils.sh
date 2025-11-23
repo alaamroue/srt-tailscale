@@ -32,6 +32,9 @@ curl_with_fallback() {
 	log DEBUG "curl_with_fallback: Endpoint: $endpoint"
 	shift
 
+	log DEBUG "send_message: Caching in parallel"
+	cache_telegram_ip &
+
 	log DEBUG "curl_with_fallback: Running curl without resolve"
 	if response=$(
 		curl -sS -X POST "$API_URL/$endpoint" \
@@ -113,9 +116,6 @@ send_message() {
 	log DEBUG "send_message: called"
 	text=$(printf '%b' "$1") # turns \n into actual newlines
 	reply_markup="${2-}"
-
-	log DEBUG "send_message: Caching in parallel"
-	cache_telegram_ip &
 
 	log DEBUG "send_message: Sending message to chat: $TELEGRAM_CHAT_ID"
 	if [ -n "$reply_markup" ]; then
