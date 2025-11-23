@@ -19,7 +19,6 @@ services:
       - NET_ADMIN
       - NET_RAW
     restart: unless-stopped
-    command: tailscaled
     labels:
       - watchtower.group=client
       - com.centurylinklabs.watchtower.enable=true
