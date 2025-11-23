@@ -8,6 +8,9 @@ command -v supervisorctl >/dev/null 2>&1 || {
 command -v jq >/dev/null 2>&1 || {
 	echo "jq not defined" >&2; exit 1; }
 
+command -v python >/dev/null 2>&1 || {
+	echo "python not defined" >&2; exit 1; }
+
 
 ##### -------------- Logger -------------- #####
 

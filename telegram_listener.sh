@@ -47,7 +47,8 @@ send_options_menu() {
     "inline_keyboard":[
       [
         {"text":"📺 Stream","callback_data":"STREAM"},
-        {"text":"📸 Capture","callback_data":"CAPTURE"}
+        {"text":"📸 Capture","callback_data":"CAPTURE"},
+        {"text":"📊 Status","callback_data":"STATUS"}
       ],
       [
         {"text":"📖 Read config","callback_data":"GET_CONFIG"},
@@ -98,6 +99,33 @@ Current options:
 EOF
 	)"
 	send_message "$msg"
+}
+
+send_current_status() {
+	log DEBUG "send_current_status: called"
+	if [ -x "$SCRIPT_DIR/get_hat_data.py" ]; then
+		log DEBUG "send_current_status: $SCRIPT_DIR/get_hat_data.py found."
+		
+		set -- $(python get_hat_data.py)
+		LOAD_VOLTAGE=$1
+		CURRENT=$2
+		POWER=$3
+		PERCENT=$4
+		msg="$(
+		cat <<EOF
+Status:
+- 🔌  Load voltage :$LOAD_VOLTAGE V
+- ⚡  Current      :$CURRENT mA
+- 💡  Power        :$POWER W
+- 📊  Percent      :$PERCENT %
+EOF
+	)"
+	send_message "$msg"
+
+	else
+		log DEBUG "send_current_status: {$SCRIPT_DIR}/get_hat_data.py not found."
+		send_message "⚠️ *get_hat_data.py* not found or not executable."
+	fi
 }
 
 run_capture() {
@@ -311,6 +339,10 @@ handle_message_update() {
 		log DEBUG "handle_message_update: /capture requested"
 		run_capture
 		;;
+	"/status")
+		log DEBUG "handle_message_update: /status requested"
+		send_current_status
+		;;
 	"/set")
 		log DEBUG "handle_message_update: /set requested"
 		send_set_menu
@@ -343,6 +375,10 @@ handle_callback_update() {
 	"CAPTURE")
 		run_capture
 		answer_callback "$callback_id" "Running capture.sh…"
+		;;
+	"STATUS")
+		send_current_status
+		answer_callback "$callback_id" "Getting status…"
 		;;
 	"GET_CONFIG")
 		send_current_config

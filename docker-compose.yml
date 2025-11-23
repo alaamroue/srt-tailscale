@@ -5,6 +5,7 @@ services:
     container_name: cam-client
     devices:
       - ${CLIENT_VIDEO_DEVICE}:/dev/video0
+      - /dev/i2c-1:/dev/i2c-1
     environment:
       - CLIENT_STREAM_RESOLUTION=${CLIENT_STREAM_RESOLUTION}
       - CLIENT_LOCAL_ENCODER=${CLIENT_LOCAL_ENCODER}
