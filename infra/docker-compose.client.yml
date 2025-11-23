@@ -1,30 +1,5 @@
 services:
   # --------------------------
-  # Tailscale sidecar
-  # --------------------------
-  tailscale-sc-client:
-    image: tailscale/tailscale:stable
-    container_name: tailscale-sc-client
-    hostname: srt-client
-    environment:
-      - TS_AUTHKEY=${TS_AUTHKEY_CLIENT}
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=false
-      - TS_ACCEPT_DNS=true
-    volumes:
-      - tailscale-state-client:/var/lib/tailscale
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    restart: unless-stopped
-    command: tailscaled
-    labels:
-      - watchtower.group=client
-      - com.centurylinklabs.watchtower.enable=true
-
-  # --------------------------
   # SRT Live Client
   # --------------------------
   srt-client:
@@ -33,15 +8,16 @@ services:
       context: ./srt-client/
       dockerfile: Dockerfile
     container_name: srt-client
-    network_mode: service:tailscale-sc-client
-    depends_on:
-      - tailscale-sc-client
+    #network_mode: service:tailscale-sc-client
+    #depends_on:
+    #  - tailscale-sc-client
     restart: unless-stopped
-    labels:
-      - watchtower.group=client
-      - com.centurylinklabs.watchtower.enable=true
     devices:
       - ${CLIENT_VIDEO_DEVICE}:/dev/video0
+      - /dev/video10:/dev/video10
+      - /dev/video11:/dev/video11
+      - /dev/video12:/dev/video12
+      - /dev/video18:/dev/video18
     environment:
       - CLIENT_STREAM_RESOLUTION=${CLIENT_STREAM_RESOLUTION}
       - CLIENT_LOCAL_ENCODER=${CLIENT_LOCAL_ENCODER}
@@ -54,37 +30,16 @@ services:
       - ./srt-client/motion_detector_config.txt:/motion_detector_config.txt
 
   nginx-client:
-    #image: alaamr/nginx-client:latest
     build:
       context: ./nginx-client/
       dockerfile: Dockerfile
     container_name: nginx-client
     volumes:
       - /mnt/srt-client/archive:/archive:ro
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "9001:9001"
     depends_on:
-      - tailscale-sc-client
       - srt-client
-    network_mode: service:tailscale-sc-client
     restart: unless-stopped
-
-  # --------------------------
-  # Watchtower for auto-updates
-  # --------------------------
-  watchtower-client:
-    image: containrrr/watchtower:latest
-    container_name: watchtower-client
-    environment:
-      - DOCKER_API_VERSION=1.52 # Watchtower complains otherwise, see https://github.com/containrrr/watchtower/issues/2126
-    command:
-      - "--label-enable"
-      - "--scope"
-      - "server"
-      - "--cleanup"
-      - "--interval"
-      - "60"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: unless-stopped
-
-volumes:
-  tailscale-state-client:
