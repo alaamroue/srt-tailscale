@@ -1,15 +1,10 @@
 services:
-  srt-client:
+  cam-client:
     build:
-      context: ./srt-client/
       dockerfile: Dockerfile
-    container_name: srt-client
+    container_name: cam-client
     devices:
       - ${CLIENT_VIDEO_DEVICE}:/dev/video0
-      #- /dev/video10:/dev/video10
-      #- /dev/video11:/dev/video11
-      #- /dev/video12:/dev/video12
-      #- /dev/video18:/dev/video18
     environment:
       - CLIENT_STREAM_RESOLUTION=${CLIENT_STREAM_RESOLUTION}
       - CLIENT_LOCAL_ENCODER=${CLIENT_LOCAL_ENCODER}
@@ -22,6 +17,7 @@ services:
       - "8080:8080"
       - "9001:9001"
     volumes:
-      - ./srt-client/motion_detector_config.txt:/motion_detector_config.txt
+      - ./motion_detector_config.txt:/motion_detector_config.txt
+      - ./telegram_ip_cache.txt:/telegram_ip_cache.txt
       - ./archive:/archive
     restart: unless-stopped

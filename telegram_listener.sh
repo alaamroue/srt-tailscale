@@ -13,9 +13,42 @@ set -eu
 : "${TELEGRAM_TOKEN:?Please export TELEGRAM_TOKEN=your_telegram_bot_token}"
 : "${TELEGRAM_CHAT_ID:?Please export TELEGRAM_CHAT_ID=your_telegram_chat_id}"
 
-API_URL="https://api.telegram.org/bot${TELEGRAM_TOKEN}"
+TELEGRAM_HOST="api.telegram.org"
+API_URL="https://${TELEGRAM_HOST}/bot${TELEGRAM_TOKEN}"
+TELEGRAM_IP_CACHE="/telegram_ip_cache.txt"
+STREAM_URL="http://localhost/stream"
 CONFIG_FILE="/motion_detector_config.txt"
-STREAM_URL="http://srt-client/stream"
+
+reset_telegram_host() {
+    echo "[DEBUG] Resetting Telegram host"
+    if curl -s -o /dev/null "https://api.telegram.org"; then
+        echo "[DEBUG] api.telegram.org reachable, updating API_URL"
+        API_URL="https://${TELEGRAM_HOST}/bot${TELEGRAM_TOKEN}"
+    else
+        echo "[DEBUG] api.telegram.org not reachable, not changing API_URL"
+    fi
+}
+
+cache_telegram_ip() {
+	echo "[DEBUG] Caching Telegram ip"
+	ip=$(getent hosts "$TELEGRAM_HOST" 2>/dev/null | awk '{print $1; exit}') || return 1
+	echo "[DEBUG] Got IP: $ip"
+	[ -n "$ip" ] || return 1
+	echo "[DEBUG] Saving: $ip into cache at $TELEGRAM_IP_CACHE"
+	echo "$ip" >"$TELEGRAM_IP_CACHE"
+}
+
+use_cached_telegram_ip() {
+	echo "[DEBUG] Using cached Telegram ip"
+	if [ -s "$TELEGRAM_IP_CACHE" ]; then
+		echo "[DEBUG] Found cached Telegram ip file"
+		IFS= read -r ip <telegram_ip_cache.txt || return 0
+		echo "[DEBUG] Read ip from $TELEGRAM_IP_CACHE as: $ip"
+		if [ -n "$ip" ]; then
+			API_URL="https://${ip}/bot${TELEGRAM_TOKEN}"
+		fi
+	fi
+}
 
 # Setup
 echo "" >${TELEGRAM_CHAT_ID}.state
@@ -223,11 +256,6 @@ send_value_menu() {
 		mul4=$((v * 4))
 		;;
 	esac
-	echo "v is $v"
-	echo "div4 is $div4" 
-	echo "div2 is $div2" 
-	echo "mul2 is $mul2" 
-	echo "mul4 is $mul4" 
 
 	markup="
   {
@@ -456,13 +484,43 @@ echo "Bot started. Press Ctrl+C to stop."
 
 LAST_UPDATE_ID=0
 while true; do
-	response=$(curl -s "$API_URL/getUpdates" \
-		-d "timeout=50" \
-		-d "offset=$((LAST_UPDATE_ID + 1))") || {
-		echo "Failed to getUpdates, retrying in 2s…" >&2
-		sleep 2
+	reset_telegram_host &
+	response=$(
+		curl -sS -f \
+			--connect-timeout 5 \
+			"$API_URL/getUpdates" \
+			-d "timeout=50" \
+			-d "offset=$((LAST_UPDATE_ID + 1))"
+	)
+	status=$?
+
+	case "$status" in
+	0)
+		echo "[DEBUG] getUpdates: OK!"
+		# on success, try to refresh cached IP in background-ish
+		cache_telegram_ip >/dev/null 2>&1 &
+		;;
+	6)
+		echo "[DEBUG] getUpdates: could not resolve host (DNS problem?)"
+		use_cached_telegram_ip
 		continue
-	}
+		;;
+	7)
+		echo "[DEBUG] getUpdates: failed to connect to host (connection refused / no route)"
+		use_cached_telegram_ip
+		continue
+		;;
+	28)
+		echo "[DEBUG] getUpdates: operation timed out"
+		use_cached_telegram_ip
+		continue
+		;;
+	*)
+		echo "[DEBUG] getUpdates: curl error $status"
+		use_cached_telegram_ip
+		continue
+		;;
+	esac
 
 	last_id=$(echo "$response" | jq -r 'if (.result | length) > 0 then .result[-1].update_id else empty end')
 	if [ -n "$last_id" ] && [ "$last_id" != "null" ]; then
