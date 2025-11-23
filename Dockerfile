@@ -20,6 +20,7 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY streamer.sh /usr/local/bin/
 COPY recorder.sh /usr/local/bin/
 COPY motion_detector.py /usr/local/bin/
+COPY telegram_utils.sh /usr/local/bin/
 COPY telegram_listener.sh /usr/local/bin/
 COPY telegram_send_capture.sh /usr/local/bin/
 
