@@ -10,6 +10,10 @@ FROM alpine:latest
 RUN apk --no-cache add ffmpeg supervisor font-dejavu py3-opencv jq curl libevent
 COPY --from=build /usr/local/bin/ustreamer /usr/local/bin/
 
+#nginx
+COPY webpage/ /var/www/html/
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copy supervisor scripts
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY streamer.sh /usr/local/bin/

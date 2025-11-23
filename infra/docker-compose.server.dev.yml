@@ -1,5 +1,0 @@
-services:
-  srt-server:
-    build:
-      context: ./../server/srt-server
-      dockerfile: Dockerfile
