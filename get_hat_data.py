@@ -1,288 +1,163 @@
+# Based on documentation:
+# INA219 Zerø-Drift, Bidirectional Current/Power Monitor With I2C Interface
+
 import smbus
 import time
+import math
 
-# Config Register (R/W)
-_REG_CONFIG                 = 0x00
-# SHUNT VOLTAGE REGISTER (R)
-_REG_SHUNTVOLTAGE           = 0x01
+# INA219 I2C address on Waveshare UPS HAT (check with `i2cdetect` if unsure):
+I2C_BUS                  = 1           # Default I2C bus
+INA219_ADDR              = 0x42        # INA219 address, Run to check: i2cdetect 1
 
-# BUS VOLTAGE REGISTER (R)
-_REG_BUSVOLTAGE             = 0x02
+# INA219 register addresses (from datasheet)
+REG_CONFIG               = 0x00        # Configuration register (R/W)
+REG_SHUNTVOLTAGE         = 0x01        # Shunt voltage register (R)
+REG_BUSVOLTAGE           = 0x02        # Bus voltage register (R)
+REG_POWER                = 0x03        # Power register (R)
+REG_CURRENT              = 0x04        # Current register (R)
+REG_CALIBRATION          = 0x05        # Calibration register (R/W)
 
-# POWER REGISTER (R)
-_REG_POWER                  = 0x03
-
-# CURRENT REGISTER (R)
-_REG_CURRENT                = 0x04
-
-# CALIBRATION REGISTER (R/W)
-_REG_CALIBRATION            = 0x05
-
-class BusVoltageRange:
-    """Constants for ``bus_voltage_range``"""
-    RANGE_16V               = 0x00      # set bus voltage range to 16V
-    RANGE_32V               = 0x01      # set bus voltage range to 32V (default)
-
-class Gain:
-    """Constants for ``gain``"""
-    DIV_1_40MV              = 0x00      # shunt prog. gain set to  1, 40 mV range
-    DIV_2_80MV              = 0x01      # shunt prog. gain set to /2, 80 mV range
-    DIV_4_160MV             = 0x02      # shunt prog. gain set to /4, 160 mV range
-    DIV_8_320MV             = 0x03      # shunt prog. gain set to /8, 320 mV range
-
-class ADCResolution:
-    """Constants for ``bus_adc_resolution`` or ``shunt_adc_resolution``"""
-    ADCRES_9BIT_1S          = 0x00      #  9bit,   1 sample,     84us
-    ADCRES_10BIT_1S         = 0x01      # 10bit,   1 sample,    148us
-    ADCRES_11BIT_1S         = 0x02      # 11 bit,  1 sample,    276us
-    ADCRES_12BIT_1S         = 0x03      # 12 bit,  1 sample,    532us
-    ADCRES_12BIT_2S         = 0x09      # 12 bit,  2 samples,  1.06ms
-    ADCRES_12BIT_4S         = 0x0A      # 12 bit,  4 samples,  2.13ms
-    ADCRES_12BIT_8S         = 0x0B      # 12bit,   8 samples,  4.26ms
-    ADCRES_12BIT_16S        = 0x0C      # 12bit,  16 samples,  8.51ms
-    ADCRES_12BIT_32S        = 0x0D      # 12bit,  32 samples, 17.02ms
-    ADCRES_12BIT_64S        = 0x0E      # 12bit,  64 samples, 34.05ms
-    ADCRES_12BIT_128S       = 0x0F      # 12bit, 128 samples, 68.10ms
-
+# Operating Mode: Table 6 (p.20)
+#   These select what the chip measures and how often
 class Mode:
-    """Constants for ``mode``"""
-    POWERDOW                = 0x00      # power down
-    SVOLT_TRIGGERED         = 0x01      # shunt voltage triggered
-    BVOLT_TRIGGERED         = 0x02      # bus voltage triggered
-    SANDBVOLT_TRIGGERED     = 0x03      # shunt and bus voltage triggered
-    ADCOFF                  = 0x04      # ADC off
-    SVOLT_CONTINUOUS        = 0x05      # shunt voltage continuous
-    BVOLT_CONTINUOUS        = 0x06      # bus voltage continuous
-    SANDBVOLT_CONTINUOUS    = 0x07      # shunt and bus voltage continuous
+    BIT_FIELD = 0                      # Bits 0-2
+    POWERDOW             = 0x00        # Power-down
+    SVOLT_TRIGGERED      = 0x01        # Shunt voltage, triggered
+    BVOLT_TRIGGERED      = 0x02        # Bus voltage, triggered
+    SANDBVOLT_TRIGGERED  = 0x03        # Shunt and bus, triggered
+    ADCOFF               = 0x04        # ADC off (disabled)
+    SVOLT_CONTINUOUS     = 0x05        # Shunt voltage, continuous
+    BVOLT_CONTINUOUS     = 0x06        # Bus voltage, continuous
+    SANDBVOLT_CONTINUOUS = 0x07        # Shunt and bus, continuous
+
+# Shunt ADC Resolution: Table 5 (p.20)
+# speed vs noise trade-off for the shunt voltage. (More sample -> more time but less noise)
+class SADCResolution:
+    BIT_FIELD = 3                      # Bits 3-6
+    ADCRES_9BIT_1S       = 0b0000      # Single conversion: 9  bit        84us
+    ADCRES_10BIT_1S      = 0b0001      # Single conversion: 10 bit        148us
+    ADCRES_11BIT_1S      = 0b0010      # Single conversion: 11 bit        276us
+    ADCRES_12BIT_1S      = 0b1000      # 12 bit Averaging, Sampling: 1    532us
+    ADCRES_12BIT_2S      = 0b1001      # 12 bit Averaging, Sampling: 2    1.06ms
+    ADCRES_12BIT_4S      = 0b1010      # 12 bit Averaging, Sampling: 4    2.13ms
+    ADCRES_12BIT_8S      = 0b1011      # 12 bit Averaging, Sampling: 8    4.26ms
+    ADCRES_12BIT_16S     = 0b1100      # 12 bit Averaging, Sampling: 16   8.51ms
+    ADCRES_12BIT_32S     = 0b1101      # 12 bit Averaging, Sampling: 32   17.02ms
+    ADCRES_12BIT_64S     = 0b1110      # 12 bit Averaging, Sampling: 64   34.05ms
+    ADCRES_12BIT_128S    = 0b1111      # 12 bit Averaging, Sampling: 128  68.10ms
+
+# Bus ADC Resolution: Table 5 (p.20)
+# speed vs noise trade-off for the bus voltage. (More sample -> more time but less noise)
+class BADCResolution:
+    BIT_FIELD = 7                      # Bits 7-10
+    ADCRES_9BIT_1S       = 0b0000      # Single conversion: 9  bit        84us
+    ADCRES_10BIT_1S      = 0b0001      # Single conversion: 10 bit        148us
+    ADCRES_11BIT_1S      = 0b0010      # Single conversion: 11 bit        276us
+    ADCRES_12BIT_1S      = 0b1000      # 12 bit Averaging, Sampling: 1    532us
+    ADCRES_12BIT_2S      = 0b1001      # 12 bit Averaging, Sampling: 2    1.06ms
+    ADCRES_12BIT_4S      = 0b1010      # 12 bit Averaging, Sampling: 4    2.13ms
+    ADCRES_12BIT_8S      = 0b1011      # 12 bit Averaging, Sampling: 8    4.26ms
+    ADCRES_12BIT_16S     = 0b1100      # 12 bit Averaging, Sampling: 16   8.51ms
+    ADCRES_12BIT_32S     = 0b1101      # 12 bit Averaging, Sampling: 32   17.02ms
+    ADCRES_12BIT_64S     = 0b1110      # 12 bit Averaging, Sampling: 64   34.05ms
+    ADCRES_12BIT_128S    = 0b1111      # 12 bit Averaging, Sampling: 128  68.10ms
+
+# Gain amplifier: Table 4 (p.20)
+# PGA gain for shunt voltage
+class Gain:
+    BIT_FIELD = 11                     # Bits 11-12
+    DIV_1_40MV           = 0b00        # shunt prog. gain set to  1, ±40 mV range
+    DIV_2_80MV           = 0b01        # shunt prog. gain set to /2, ±80 mV range
+    DIV_4_160MV          = 0b10        # shunt prog. gain set to /4, ±160 mV range
+    DIV_8_320MV          = 0b11        # shunt prog. gain set to /8, ±320 mV range
+
+# Bus Voltage Range: (p.19)
+class VoltageRange:
+    BIT_FIELD = 13                     # Bit 13
+    RANGE_16V            = 0b0         # 16V Full Scale Range
+    RANGE_32V            = 0b1         # 32V Full Scale Range
+
+# BIT 14 IS RESERVED
+
+# Bus Voltage Range (p.19)
+class ResetBit:
+    BIT_FIELD = 15                     # Bit 15
+    NO_RESET             = 0b0         # Does nothing
+    RESET                = 0b1         # Generate system reset
 
 
-class INA219:
-    def __init__(self, i2c_bus=1, addr=0x40):
-        self.bus = smbus.SMBus(i2c_bus);
-        self.addr = addr
+# Constants
+CALIBRATION_SCALER_CONST = 0.04096     # from datasheet page 12
+MAX_16BIT_REG            = 32767       # A 16 bit register can hold numbers between -32768 and 32767
 
-        # Set chip to known config values to start
-        self._cal_value = 0
-        self._current_lsb = 0
-        self._power_lsb = 0
-        #self.set_calibration_32V_2A()
-        self.set_calibration_16V_5A()
+# Desired operating parameters
+SHUNT_RESISTOR_OHMS      = 0.01        # The schematic shows 0.1 Ω but this is a mistake? 0.01 Ω (From board)
+MAX_EXPECTED_AMPS        = 2.0         # Max expected current = 2 A
 
-    def read(self,address):
-        data = self.bus.read_i2c_block_data(self.addr, address, 2)
-        return ((data[0] * 256 ) + data[1])
 
-    def write(self,address,data):
-        temp = [0,0]
-        temp[1] = data & 0xFF
-        temp[0] =(data & 0xFF00) >> 8
-        self.bus.write_i2c_block_data(self.addr,address,temp)
+# Helper function to get round up to next power of 10
 
-    def set_calibration_32V_2A(self):
-        """Configures to INA219 to be able to measure up to 32V and 2A of current. Counter
-           overflow occurs at 3.2A.
-           ..note :: These calculations assume a 0.1 shunt ohm resistor is present
-        """
-        # By default we use a pretty huge range for the input voltage,
-        # which probably isn't the most appropriate choice for system
-        # that don't use a lot of power.  But all of the calculations
-        # are shown below if you want to change the settings.  You will
-        # also need to change any relevant register settings, such as
-        # setting the VBUS_MAX to 16V instead of 32V, etc.
+# Calculations based on data sheet
+min_current_lsb          = MAX_EXPECTED_AMPS / MAX_16BIT_REG                                     # minimum LSB for full range
+current_lsb              = 1.0*10**math.ceil(math.log10(MAX_EXPECTED_AMPS / 2**15))              # p. 12 eq. 2 (with rounding up)
+calibration_val          = int(CALIBRATION_SCALER_CONST / (current_lsb * SHUNT_RESISTOR_OHMS))   # p. 12 eq. 1
+power_lsb                = 20 * current_lsb                                                      # p. 12 eq. 3
 
-        # VBUS_MAX = 32V             (Assumes 32V, can also be set to 16V)
-        # VSHUNT_MAX = 0.32          (Assumes Gain 8, 320mV, can also be 0.16, 0.08, 0.04)
-        # RSHUNT = 0.1               (Resistor value in ohms)
 
-        # 1. Determine max possible current
-        # MaxPossible_I = VSHUNT_MAX / RSHUNT
-        # MaxPossible_I = 3.2A
+# //////////////////////// ----  Config    ---- ////////////////////////
 
-        # 2. Determine max expected current
-        # MaxExpected_I = 2.0A
+config_val = (VoltageRange.RANGE_16V           << VoltageRange.BIT_FIELD   ) | \
+             (Gain.DIV_1_40MV                  << Gain.BIT_FIELD           ) | \
+             (BADCResolution.ADCRES_12BIT_128S << BADCResolution.BIT_FIELD ) | \
+             (SADCResolution.ADCRES_12BIT_128S << SADCResolution.BIT_FIELD ) | \
+             (Mode.SANDBVOLT_CONTINUOUS        << Mode.BIT_FIELD           )
 
-        # 3. Calculate possible range of LSBs (Min = 15-bit, Max = 12-bit)
-        # MinimumLSB = MaxExpected_I/32767
-        # MinimumLSB = 0.000061              (61uA per bit)
-        # MaximumLSB = MaxExpected_I/4096
-        # MaximumLSB = 0,000488              (488uA per bit)
+# /////////////////////////////////////////////////////////////////////
 
-        # 4. Choose an LSB between the min and max values
-        #    (Preferrably a roundish number close to MinLSB)
-        # CurrentLSB = 0.0001 (100uA per bit)
-        self._current_lsb = .1  # Current LSB = 100uA per bit
 
-        # 5. Compute the calibration register
-        # Cal = trunc (0.04096 / (Current_LSB * RSHUNT))
-        # Cal = 4096 (0x1000)
+# ////////////////////// ----  Helper Functions   ---- ////////////////
 
-        self._cal_value = 4096
+# Big Endian reading and writing
 
-        # 6. Calculate the power LSB
-        # PowerLSB = 20 * CurrentLSB
-        # PowerLSB = 0.002 (2mW per bit)
-        self._power_lsb = .002  # Power LSB = 2mW per bit
+def registerReader(smbus, i2c_addr, register, length=2):
+    data = smbus.read_i2c_block_data(i2c_addr, register, length)
+    return (data[0] << 8) | data[1]
 
-        # 7. Compute the maximum current and shunt voltage values before overflow
-        #
-        # Max_Current = Current_LSB * 32767
-        # Max_Current = 3.2767A before overflow
-        #
-        # If Max_Current > Max_Possible_I then
-        #    Max_Current_Before_Overflow = MaxPossible_I
-        # Else
-        #    Max_Current_Before_Overflow = Max_Current
-        # End If
-        #
-        # Max_ShuntVoltage = Max_Current_Before_Overflow * RSHUNT
-        # Max_ShuntVoltage = 0.32V
-        #
-        # If Max_ShuntVoltage >= VSHUNT_MAX
-        #    Max_ShuntVoltage_Before_Overflow = VSHUNT_MAX
-        # Else
-        #    Max_ShuntVoltage_Before_Overflow = Max_ShuntVoltage
-        # End If
+def registerWriter(smbus, i2c_addr, register, data):
+    high_reg = (data >> 8) & 0b1111_1111
+    low_reg = data & 0b1111_1111
+    smbus.write_i2c_block_data(i2c_addr, register, [high_reg, low_reg])
 
-        # 8. Compute the Maximum Power
-        # MaximumPower = Max_Current_Before_Overflow * VBUS_MAX
-        # MaximumPower = 3.2 * 32V
-        # MaximumPower = 102.4W
 
-        # Set Calibration register to 'Cal' calculated above
-        self.write(_REG_CALIBRATION,self._cal_value)
+# /////////////////////////////////////////////////////////////////////
 
-        # Set Config register to take into account the settings above
-        self.bus_voltage_range = BusVoltageRange.RANGE_32V
-        self.gain = Gain.DIV_8_320MV
-        self.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-        self.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-        self.mode = Mode.SANDBVOLT_CONTINUOUS
-        self.config = self.bus_voltage_range << 13 | \
-                      self.gain << 11 | \
-                      self.bus_adc_resolution << 7 | \
-                      self.shunt_adc_resolution << 3 | \
-                      self.mode
-        self.write(_REG_CONFIG,self.config)
+bus = smbus.SMBus(I2C_BUS)
+registerWriter(bus, INA219_ADDR, REG_CALIBRATION, calibration_val)
+registerWriter(bus, INA219_ADDR, REG_CONFIG, config_val)
 
-    def set_calibration_16V_5A(self):
-        """Configures to INA219 to be able to measure up to 16V and 5A of current. Counter
-           overflow occurs at 16A.
-           ..note :: These calculations assume a 0.01 shunt ohm resistor is present
-        """
-        # By default we use a pretty huge range for the input voltage,
-        # which probably isn't the most appropriate choice for system
-        # that don't use a lot of power.  But all of the calculations
-        # are shown below if you want to change the settings.  You will
-        # also need to change any relevant register settings, such as
-        # setting the VBUS_MAX to 16V instead of 32V, etc.
+# Read Voltage Register
+# Bit 0 is Math Overflow Flag
+# Bit 1 is Conversion Ready
+# Bit 2 is ignored
+# Bits 3->15 is the voltage, with each less significant bit being 4 mv
+# We skip the first 3 bits
+voltReg = registerReader(bus, INA219_ADDR, REG_BUSVOLTAGE)
+voltage = (voltReg >> 3) * 0.004
 
-        # VBUS_MAX = 16V             (Assumes 16V, can also be set to 32V)
-        # VSHUNT_MAX = 0.08          (Assumes Gain 2, 80mV, can also be 0.32, 0.16, 0.04)
-        # RSHUNT = 0.01               (Resistor value in ohms)
+# Read shunt current (16-bit signed)
+# Sign correction for current by checking MSB
+currentReg          = registerReader(bus, INA219_ADDR, REG_CURRENT)
+currentRegCorrected = currentReg if currentReg < 0x8000  else currentReg - 0x10000
+current = currentRegCorrected * current_lsb
 
-        # 1. Determine max possible current
-        # MaxPossible_I = VSHUNT_MAX / RSHUNT
-        # MaxPossible_I = 8.0A
+# Read power (16-bit unsigned)
+powerReg = registerReader(bus, INA219_ADDR, REG_POWER)
+power = powerReg * power_lsb                             # The power register is scaling of current * bus; convert to mW:
 
-        # 2. Determine max expected current
-        # MaxExpected_I = 5.0A
+# Try to find battery percentage
+ASSUMED_v_AT_100 = 8.4
+ASSUMED_v_AT_0   = 6.0
+percentage = max(min((voltage - ASSUMED_v_AT_0)/(ASSUMED_v_AT_100-ASSUMED_v_AT_0)*100, 100), 0)
 
-        # 3. Calculate possible range of LSBs (Min = 15-bit, Max = 12-bit)
-        # MinimumLSB = MaxExpected_I/32767
-        # MinimumLSB = 0.0001529              (61uA per bit)
-        # MaximumLSB = MaxExpected_I/4096
-        # MaximumLSB = 0,0012207              (488uA per bit)
-
-        # 4. Choose an LSB between the min and max values
-        #    (Preferrably a roundish number close to MinLSB)
-        # CurrentLSB = 0.00016 (uA per bit)
-        self._current_lsb = 0.1524  # Current LSB = 100uA per bit
-
-        # 5. Compute the calibration register
-        # Cal = trunc (0.04096 / (Current_LSB * RSHUNT))
-        # Cal = 13434 (0x347a)
-
-        self._cal_value = 26868
-
-        # 6. Calculate the power LSB
-        # PowerLSB = 20 * CurrentLSB
-        # PowerLSB = 0.002 (2mW per bit)
-        self._power_lsb = 0.003048  # Power LSB = 2mW per bit
-
-        # 7. Compute the maximum current and shunt voltage values before overflow
-        #
-        # Max_Current = Current_LSB * 32767
-        # Max_Current = 3.2767A before overflow
-        #
-        # If Max_Current > Max_Possible_I then
-        #    Max_Current_Before_Overflow = MaxPossible_I
-        # Else
-        #    Max_Current_Before_Overflow = Max_Current
-        # End If
-        #
-        # Max_ShuntVoltage = Max_Current_Before_Overflow * RSHUNT
-        # Max_ShuntVoltage = 0.32V
-        #
-        # If Max_ShuntVoltage >= VSHUNT_MAX
-        #    Max_ShuntVoltage_Before_Overflow = VSHUNT_MAX
-        # Else
-        #    Max_ShuntVoltage_Before_Overflow = Max_ShuntVoltage
-        # End If
-
-        # 8. Compute the Maximum Power
-        # MaximumPower = Max_Current_Before_Overflow * VBUS_MAX
-        # MaximumPower = 3.2 * 32V
-        # MaximumPower = 102.4W
-
-        # Set Calibration register to 'Cal' calculated above
-        self.write(_REG_CALIBRATION,self._cal_value)
-
-        # Set Config register to take into account the settings above
-        self.bus_voltage_range = BusVoltageRange.RANGE_16V
-        self.gain = Gain.DIV_2_80MV
-        self.bus_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-        self.shunt_adc_resolution = ADCResolution.ADCRES_12BIT_32S
-        self.mode = Mode.SANDBVOLT_CONTINUOUS
-        self.config = self.bus_voltage_range << 13 | \
-                      self.gain << 11 | \
-                      self.bus_adc_resolution << 7 | \
-                      self.shunt_adc_resolution << 3 | \
-                      self.mode
-        self.write(_REG_CONFIG,self.config)
-
-    def getShuntVoltage_mV(self):
-        self.write(_REG_CALIBRATION,self._cal_value)
-        value = self.read(_REG_SHUNTVOLTAGE)
-        if value > 32767:
-            value -= 65535
-        return value * 0.01
-
-    def getBusVoltage_V(self):
-        self.write(_REG_CALIBRATION,self._cal_value)
-        self.read(_REG_BUSVOLTAGE)
-        return (self.read(_REG_BUSVOLTAGE) >> 3) * 0.004
-
-    def getCurrent_mA(self):
-        value = self.read(_REG_CURRENT)
-        if value > 32767:
-            value -= 65535
-        return value * self._current_lsb
-
-    def getPower_W(self):
-        self.write(_REG_CALIBRATION,self._cal_value)
-        value = self.read(_REG_POWER)
-        if value > 32767:
-            value -= 65535
-        return value * self._power_lsb
-        
-if __name__=='__main__':
-    ina219 = INA219(addr=0x42)
-    bus_voltage = ina219.getBusVoltage_V()             # voltage on V- (load side)
-    shunt_voltage = ina219.getShuntVoltage_mV() / 1000 # voltage between V+ and V- across the shunt
-    current = ina219.getCurrent_mA()                   # current in mA
-    power = ina219.getPower_W()                        # power in W
-    p = (bus_voltage - 6)/2.4*100
-    if(p > 100):p = 100
-    if(p < 0):p = 0
-
-    print(f"{bus_voltage:.3f} {current/1000:.6f} {power:.3f} {p:.1f}")
+# Print the readings
+print(f"{voltage:.3f} {current*1000:.6f} {power*1000:.3f} {percentage:.1f}")

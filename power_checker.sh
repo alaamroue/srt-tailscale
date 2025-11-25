@@ -16,7 +16,7 @@ sign() {
 }
 
 get_hat_value() {
-    if ! output=$(python3 "$SCRIPT_DIR/get_hat_data.py"); then
+    if ! output=$(python "$SCRIPT_DIR/get_hat_data.py"); then
         log ERROR "get_hat_data.py failed"
         printf '%s\n' ""
         return 1

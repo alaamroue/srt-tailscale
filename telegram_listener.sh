@@ -103,10 +103,10 @@ EOF
 
 send_current_status() {
 	log DEBUG "send_current_status: called"
-	if [ -x "$SCRIPT_DIR/get_hat_data.py" ]; then
+	if [ -f "$SCRIPT_DIR/get_hat_data.py" ]; then
 		log DEBUG "send_current_status: $SCRIPT_DIR/get_hat_data.py found."
 		
-		set -- $(python get_hat_data.py)
+		set -- $(python "$SCRIPT_DIR/get_hat_data.py")
 		LOAD_VOLTAGE=$1
 		CURRENT=$2
 		POWER=$3
@@ -123,7 +123,7 @@ EOF
 	send_message "$msg"
 
 	else
-		log DEBUG "send_current_status: {$SCRIPT_DIR}/get_hat_data.py not found."
+		log DEBUG "send_current_status: $SCRIPT_DIR/get_hat_data.py not found."
 		send_message "⚠️ *get_hat_data.py* not found or not executable."
 	fi
 }
