@@ -130,7 +130,7 @@ EOF
 
 run_capture() {
 	log DEBUG "run_capture: called"
-	if [ -x "$SCRIPT_DIR/telegram_send_capture.sh" ]; then
+	if [ -f "$SCRIPT_DIR/telegram_send_capture.sh" ]; then
 		log DEBUG "run_capture: $SCRIPT_DIR/telegram_send_capture.sh found. Capturing"
 		"$SCRIPT_DIR/telegram_send_capture.sh" "Capture: " &
 	else
